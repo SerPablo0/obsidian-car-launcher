@@ -1,0 +1,94 @@
+package com.obsidian.carlauncher
+
+import android.app.Activity
+import android.content.ComponentName
+import android.content.Intent
+import android.os.Bundle
+import android.provider.Settings
+import android.view.View
+import android.widget.PopupMenu
+import com.obsidian.carlauncher.apps.AppDrawer
+import com.obsidian.carlauncher.media.NowPlayingController
+
+class HomeActivity : Activity() {
+
+    private lateinit var nowPlaying: NowPlayingController
+    private lateinit var drawer: AppDrawer
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_home)
+
+        drawer = AppDrawer(this, findViewById(R.id.drawer))
+        nowPlaying = NowPlayingController(this, findViewById(R.id.now_playing))
+        Shortcuts.bind(this, findViewById(R.id.shortcuts), onAllApps = drawer::open)
+
+        findViewById<View>(R.id.clock_block).setOnLongClickListener { anchor ->
+            showSystemMenu(anchor)
+            true
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        nowPlaying.start()
+    }
+
+    override fun onStop() {
+        nowPlaying.stop()
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        drawer.release()
+        super.onDestroy()
+    }
+
+    // Home is delivered here while we are already running: return to the clean home screen.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.action == Intent.ACTION_MAIN) drawer.close(animate = hasWindowFocus())
+    }
+
+    // A launcher never finishes on Back; Back only closes the app drawer.
+    override fun onBackPressed() {
+        if (drawer.isOpen) drawer.close(animate = true)
+    }
+
+    private fun showSystemMenu(anchor: View) {
+        PopupMenu(this, anchor).apply {
+            menu.add(R.string.menu_home_app).setOnMenuItemClickListener {
+                AppLauncher.start(this@HomeActivity, Intent(Settings.ACTION_HOME_SETTINGS))
+            }
+            menu.add(R.string.menu_android_settings).setOnMenuItemClickListener {
+                AppLauncher.start(this@HomeActivity, Intent(Settings.ACTION_SETTINGS))
+            }
+            menu.add(R.string.menu_car_settings).setOnMenuItemClickListener {
+                AppLauncher.startPackage(this@HomeActivity, CAR_SETTINGS_PACKAGE)
+            }
+        }.show()
+    }
+
+    private companion object {
+        const val CAR_SETTINGS_PACKAGE = "com.android.car.setting"
+    }
+}
+
+/** Starts activities from the home screen without ever crashing it. */
+object AppLauncher {
+
+    fun start(activity: Activity, intent: Intent): Boolean = try {
+        activity.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+    } catch (e: RuntimeException) {
+        false
+    }
+
+    fun startPackage(activity: Activity, packageName: String): Boolean {
+        val intent = activity.packageManager.getLaunchIntentForPackage(packageName) ?: return false
+        return start(activity, intent)
+    }
+
+    fun startComponent(activity: Activity, component: ComponentName): Boolean =
+        start(activity, Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setComponent(component))
+}

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Obsidian</string>
+    <string name="media_listener_label">Obsidian now playing</string>
+
+    <string name="shortcut_maps">Maps</string>
+    <string name="shortcut_zlink">ZLink</string>
+    <string name="shortcut_phone">Phone</string>
+    <string name="shortcut_radio">Radio</string>
+    <string name="shortcut_apps">All apps</string>
+
+    <string name="now_playing_idle_title">Nothing playing</string>
+    <string name="now_playing_idle_source">Spotify</string>
+    <string name="now_playing_idle_subtitle">Press play to start Spotify</string>
+    <string name="now_playing_no_access_title">Now playing is off</string>
+    <string name="now_playing_no_access_subtitle">Tap to allow media access</string>
+
+    <string name="drawer_title">All apps</string>
+    <string name="app_not_installed">%1$s is not installed</string>
+
+    <string name="menu_home_app">Home app</string>
+    <string name="menu_android_settings">Android settings</string>
+    <string name="menu_car_settings">Car settings</string>
+
+    <string name="cd_album_art">Album art</string>
+    <string name="cd_previous">Previous track</string>
+    <string name="cd_play">Play</string>
+    <string name="cd_pause">Pause</string>
+    <string name="cd_next">Next track</string>
+    <string name="cd_close">Close</string>
+</resources>

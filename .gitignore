@@ -1,0 +1,14 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.kotlin/
+
+# Signing material never leaves this machine.
+*.keystore
+*.jks
+
+*.apk

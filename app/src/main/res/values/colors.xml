@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#0B0C0E</color>
+    <color name="surface">#15171B</color>
+    <color name="surface_border">#22252B</color>
+    <color name="art_placeholder">#232833</color>
+    <color name="text_primary">#F2F3F5</color>
+    <color name="text_secondary">#9AA0A8</color>
+    <color name="text_label">#C9CDD3</color>
+    <color name="track">#2A2E35</color>
+    <color name="accent">#2EE6A6</color>
+    <color name="ripple">#26FFFFFF</color>
+</resources>

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    No root background: the window background already paints @color/bg, so the
+    home screen costs a single full-screen fill per frame on the GE8300.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:id="@+id/home"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingStart="40dp"
+        android:paddingTop="40dp"
+        android:paddingEnd="40dp"
+        android:paddingBottom="28dp">
+
+        <LinearLayout
+            android:id="@+id/clock_block"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:longClickable="true"
+            android:orientation="vertical">
+
+            <TextClock
+                android:id="@+id/clock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-thin"
+                android:format12Hour="h:mm"
+                android:format24Hour="HH:mm"
+                android:includeFontPadding="false"
+                android:letterSpacing="-0.03"
+                android:textColor="@color/text_primary"
+                android:textSize="132sp" />
+
+            <TextClock
+                android:id="@+id/date"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:format12Hour="EEEE, d MMMM"
+                android:format24Hour="EEEE, d MMMM"
+                android:textColor="@color/text_secondary"
+                android:textSize="24sp" />
+        </LinearLayout>
+
+        <Space
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <include
+            android:id="@+id/now_playing"
+            layout="@layout/view_now_playing" />
+
+        <LinearLayout
+            android:id="@+id/shortcuts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:orientation="horizontal">
+
+            <include
+                android:id="@+id/shortcut_maps"
+                layout="@layout/item_shortcut" />
+
+            <include
+                android:id="@+id/shortcut_zlink"
+                layout="@layout/item_shortcut" />
+
+            <include
+                android:id="@+id/shortcut_phone"
+                layout="@layout/item_shortcut" />
+
+            <include
+                android:id="@+id/shortcut_radio"
+                layout="@layout/item_shortcut" />
+
+            <include
+                android:id="@+id/shortcut_apps"
+                layout="@layout/item_shortcut" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <include
+        android:id="@+id/drawer"
+        layout="@layout/view_drawer"
+        android:visibility="gone" />
+</FrameLayout>
