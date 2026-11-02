@@ -31,14 +31,20 @@ object AutoStart {
     // On the head unit a PLAY sent 8 s after boot was lost, while the same key worked when
     // pressed later; so start a little later and retry until a session is actually playing.
     private const val RESUME_FIRST_DELAY_MS = 12_000L
-    private const val RESUME_RETRY_MS = 6_000L
-    private const val RESUME_ATTEMPTS = 6
+    // Waking from sleep the system is already up, unlike a cold boot.
+    private const val RESUME_AFTER_WAKE_MS = 4_000L
+    private const val RESUME_AFTER_BLACKOUT_MS = 4_000L
+    private const val RESUME_RETRY_MS = 5_000L
+    private const val RESUME_ATTEMPTS = 8
+    /** A short blackout this soon after a car start is the engine being cranked. */
+    private const val CRANK_WINDOW_MS = 5 * 60_000L
     // Spotify needs several seconds to cold start before it reports playing.
     private const val BUTTON_CHECK_MS = 6_000L
     /** Screen off at least this long means the car was switched off. */
     private const val CAR_OFF_MIN_MS = 90_000L
 
     private val handler = Handler(Looper.getMainLooper())
+    private val resumeHandler = Handler(Looper.getMainLooper())
 
     fun isResumeMusicEnabled(context: Context) = prefs(context).getBoolean(KEY_RESUME_MUSIC, false)
 
@@ -89,23 +95,38 @@ object AutoStart {
         screenOffAt = 0L
         if (offAt == 0L) return
         val offSeconds = (SystemClock.elapsedRealtime() - offAt) / 1000
-        if (offSeconds * 1000 >= CAR_OFF_MIN_MS) {
-            runStartActions(context.applicationContext, "screen woke after ${offSeconds}s off")
-        } else {
-            log(context.applicationContext, "screen woke after ${offSeconds}s off: too short for a car start")
+        val appContext = context.applicationContext
+        when {
+            offSeconds * 1000 >= CAR_OFF_MIN_MS ->
+                runStartActions(appContext, "screen woke after ${offSeconds}s off", RESUME_AFTER_WAKE_MS)
+            // Turning the key on to crank the engine cuts power for a moment, which can stop music
+            // that had just resumed; resume again, but do not reopen the start-up app.
+            isResumeMusicEnabled(appContext) && SystemClock.elapsedRealtime() - carStartAt < CRANK_WINDOW_MS -> {
+                log(appContext, "screen woke after ${offSeconds}s off, soon after car start (engine crank?): resuming again")
+                startResume(appContext, RESUME_AFTER_BLACKOUT_MS)
+            }
+            else -> log(appContext, "screen woke after ${offSeconds}s off: too short for a car start")
         }
     }
 
-    private fun runStartActions(context: Context, reason: String) {
+    /** Elapsed-realtime of the last car start, 0 before the first one. */
+    private var carStartAt = 0L
+
+    private fun runStartActions(context: Context, reason: String, resumeDelayMs: Long = RESUME_FIRST_DELAY_MS) {
         handler.removeCallbacksAndMessages(null)
+        carStartAt = SystemClock.elapsedRealtime()
         prefs(context).edit().putString(KEY_RESUME_LOG, "").apply()
         log(context, "car start detected: $reason")
         launchApp(context)?.let { component ->
             handler.postDelayed({ launch(context, component) }, LAUNCH_DELAY_MS)
         }
-        if (isResumeMusicEnabled(context)) {
-            handler.postDelayed({ resumeWithRetry(context, attempt = 1) }, RESUME_FIRST_DELAY_MS)
-        }
+        if (isResumeMusicEnabled(context)) startResume(context, resumeDelayMs)
+    }
+
+    private fun startResume(context: Context, delayMs: Long) {
+        // Only one resume sequence at a time.
+        resumeHandler.removeCallbacksAndMessages(null)
+        resumeHandler.postDelayed({ resumeWithRetry(context, attempt = 1) }, delayMs)
     }
 
     private fun resumeWithRetry(context: Context, attempt: Int) {
@@ -116,9 +137,9 @@ object AutoStart {
         val method = resume(context, attempt)
         log(context, "attempt $attempt: $method")
         if (attempt < RESUME_ATTEMPTS) {
-            handler.postDelayed({ resumeWithRetry(context, attempt + 1) }, RESUME_RETRY_MS)
+            resumeHandler.postDelayed({ resumeWithRetry(context, attempt + 1) }, RESUME_RETRY_MS)
         } else {
-            handler.postDelayed({ log(context, "after last attempt: playing=${isAnythingPlaying(context)}") }, RESUME_RETRY_MS)
+            resumeHandler.postDelayed({ log(context, "after last attempt: playing=${isAnythingPlaying(context)}") }, RESUME_RETRY_MS)
         }
     }
 

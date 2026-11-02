@@ -100,6 +100,9 @@
     <string name="settings_update_install_failed">Install failed: %1$s</string>
     <string name="settings_update_check">Check for updates</string>
     <string name="settings_update_install">Install %1$s</string>
+    <string name="settings_section_home">Home screen</string>
+    <string name="settings_idle_clock">Clock screen when idle</string>
+    <string name="settings_idle_clock_desc">After 2 minutes on the home screen without a touch, shows a large clock and the current song on black. Touch anywhere to return.</string>
     <string name="settings_section_start">When the car starts</string>
     <string name="settings_start_resume">Resume music</string>
     <string name="settings_start_resume_desc">Continues the app that played music last (Spotify, YouTube Music…) a few seconds after the screen starts.</string>

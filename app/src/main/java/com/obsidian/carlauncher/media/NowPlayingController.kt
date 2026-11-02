@@ -113,6 +113,12 @@ class NowPlayingController(private val activity: Activity, root: View) {
         handler.removeCallbacks(progressTicker)
     }
 
+    /** "Title · Artist" of what is playing right now, or null. */
+    fun playingLine(): String? {
+        if (!nwdActive && controller?.isPlaying != true) return null
+        return listOf(title.text, artist.text).filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { null }
+    }
+
     private fun activeSessions(): List<MediaController> = try {
         sessionManager.getActiveSessions(listenerComponent)
     } catch (e: SecurityException) {

@@ -91,4 +91,9 @@
         android:id="@+id/drawer"
         layout="@layout/view_drawer"
         android:visibility="gone" />
+
+    <include
+        android:id="@+id/idle_clock"
+        layout="@layout/view_idle_clock"
+        android:visibility="gone" />
 </FrameLayout>

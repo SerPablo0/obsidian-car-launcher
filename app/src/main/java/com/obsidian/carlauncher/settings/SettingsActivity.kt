@@ -13,6 +13,7 @@ import android.widget.RadioGroup
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import com.obsidian.carlauncher.IdleClock
 import com.obsidian.carlauncher.R
 import com.obsidian.carlauncher.bar.BarControl
 import com.obsidian.carlauncher.bar.BarState
@@ -76,6 +77,10 @@ class SettingsActivity : Activity() {
         bindVolumeSwitch(findViewById(R.id.volume_popup))
         bindUpdates()
         bindAutoStart()
+        findViewById<Switch>(R.id.idle_clock_enabled).apply {
+            isChecked = IdleClock.isEnabled(this@SettingsActivity)
+            setOnCheckedChangeListener { _, checked -> IdleClock.setEnabled(this@SettingsActivity, checked) }
+        }
 
         bindUnusedApps(findViewById(R.id.unused_list))
     }

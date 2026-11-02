@@ -18,6 +18,7 @@ class HomeActivity : Activity() {
 
     private lateinit var nowPlaying: NowPlayingController
     private lateinit var drawer: AppDrawer
+    private lateinit var idleClock: IdleClock
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,6 +30,7 @@ class HomeActivity : Activity() {
         shortcuts.bind()
         // Custom shortcuts need the app list; refresh once it arrives and after installs or removals.
         drawer.onAppsLoaded = shortcuts::bind
+        idleClock = IdleClock(findViewById(R.id.idle_clock), nowPlaying = nowPlaying::playingLine)
 
         BootOptimizer.runIfNeeded(this)
         AutoStart.runIfNeeded(this)
@@ -52,6 +54,21 @@ class HomeActivity : Activity() {
         super.onStop()
     }
 
+    override fun onResume() {
+        super.onResume()
+        idleClock.resume()
+    }
+
+    override fun onPause() {
+        idleClock.pause()
+        super.onPause()
+    }
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        idleClock.onUserInteraction()
+    }
+
     override fun onDestroy() {
         drawer.release()
         super.onDestroy()
@@ -64,7 +81,12 @@ class HomeActivity : Activity() {
     // Home is delivered here while we are already running: return to the clean home screen.
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        if (intent.action == Intent.ACTION_MAIN) drawer.close(animate = hasWindowFocus())
+        if (intent.action == Intent.ACTION_MAIN) {
+            drawer.close(animate = hasWindowFocus())
+            // The Home button counts as activity: drop the clock screen and start the idle timer again.
+            idleClock.pause()
+            idleClock.resume()
+        }
     }
 
     // A launcher never finishes on Back; Back only closes the app drawer.
