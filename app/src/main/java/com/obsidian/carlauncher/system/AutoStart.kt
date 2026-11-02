@@ -12,6 +12,9 @@ import android.os.SystemClock
 import android.view.KeyEvent
 import com.obsidian.carlauncher.media.MediaListenerService
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /** Things to do once each time the car starts: resume music and open a chosen app. */
 object AutoStart {
@@ -30,7 +33,10 @@ object AutoStart {
     private const val RESUME_FIRST_DELAY_MS = 12_000L
     private const val RESUME_RETRY_MS = 6_000L
     private const val RESUME_ATTEMPTS = 6
-    private const val BUTTON_CHECK_MS = 2_500L
+    // Spotify needs several seconds to cold start before it reports playing.
+    private const val BUTTON_CHECK_MS = 6_000L
+    /** Screen off at least this long means the car was switched off. */
+    private const val CAR_OFF_MIN_MS = 90_000L
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -57,20 +63,48 @@ object AutoStart {
         }
     }
 
-    /** Called from the home screen's onCreate; acts only on the first start after each boot. */
+    /** Called from the home screen's onCreate; acts only on the first start after each real boot. */
     fun runIfNeeded(context: Context) {
         val appContext = context.applicationContext
         val bootId = currentBootId() ?: return
         val prefs = prefs(appContext)
         if (prefs.getString(KEY_LAST_BOOT, null) == bootId) return
         prefs.edit().putString(KEY_LAST_BOOT, bootId).apply()
+        runStartActions(appContext, "boot")
+    }
 
-        launchApp(appContext)?.let { component ->
-            handler.postDelayed({ launch(appContext, component) }, LAUNCH_DELAY_MS)
+    /**
+     * The head unit rarely boots: switching the car off only puts it to sleep (it had been up
+     * for 26 days). So a screen that comes back after a long time off is a car start too.
+     * Screen-off for a moment (the Screen Off app, a short stop) does not count.
+     */
+    private var screenOffAt = 0L
+
+    fun onScreenOff() {
+        screenOffAt = SystemClock.elapsedRealtime()
+    }
+
+    fun onScreenOn(context: Context) {
+        val offAt = screenOffAt
+        screenOffAt = 0L
+        if (offAt == 0L) return
+        val offSeconds = (SystemClock.elapsedRealtime() - offAt) / 1000
+        if (offSeconds * 1000 >= CAR_OFF_MIN_MS) {
+            runStartActions(context.applicationContext, "screen woke after ${offSeconds}s off")
+        } else {
+            log(context.applicationContext, "screen woke after ${offSeconds}s off: too short for a car start")
         }
-        if (isResumeMusicEnabled(appContext)) {
-            prefs.edit().putString(KEY_RESUME_LOG, "").apply()
-            handler.postDelayed({ resumeWithRetry(appContext, attempt = 1) }, RESUME_FIRST_DELAY_MS)
+    }
+
+    private fun runStartActions(context: Context, reason: String) {
+        handler.removeCallbacksAndMessages(null)
+        prefs(context).edit().putString(KEY_RESUME_LOG, "").apply()
+        log(context, "car start detected: $reason")
+        launchApp(context)?.let { component ->
+            handler.postDelayed({ launch(context, component) }, LAUNCH_DELAY_MS)
+        }
+        if (isResumeMusicEnabled(context)) {
+            handler.postDelayed({ resumeWithRetry(context, attempt = 1) }, RESUME_FIRST_DELAY_MS)
         }
     }
 
@@ -139,8 +173,8 @@ object AutoStart {
 
     private fun log(context: Context, line: String) {
         val prefs = prefs(context)
-        val seconds = SystemClock.elapsedRealtime() / 1000
-        prefs.edit().putString(KEY_RESUME_LOG, prefs.getString(KEY_RESUME_LOG, "") + "${seconds}s after boot: $line\n").apply()
+        val time = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())
+        prefs.edit().putString(KEY_RESUME_LOG, prefs.getString(KEY_RESUME_LOG, "") + "$time  $line\n").apply()
     }
 
     private fun isAnythingPlaying(context: Context) =

@@ -1,7 +1,10 @@
 package com.obsidian.carlauncher.bar
 
 import android.accessibilityservice.AccessibilityService
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.PixelFormat
 import android.view.ContextThemeWrapper
 import android.view.Gravity
@@ -11,6 +14,7 @@ import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import com.obsidian.carlauncher.R
 import com.obsidian.carlauncher.media.NwdMedia
+import com.obsidian.carlauncher.system.AutoStart
 
 /**
  * Hosts the Obsidian bottom bar and performs Back / Home / Recents.
@@ -32,6 +36,20 @@ class BarService : AccessibilityService() {
         volumePopup = VolumePopup(this).also { it.start() }
         // Starts listening to the car's own media players from boot, before the home screen appears.
         NwdMedia.ensureRegistered(this)
+        // This service lives as long as the system runs, so it is where car on/off is noticed.
+        registerReceiver(screenReceiver, IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        })
+    }
+
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                Intent.ACTION_SCREEN_OFF -> AutoStart.onScreenOff()
+                Intent.ACTION_SCREEN_ON -> AutoStart.onScreenOn(context)
+            }
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
@@ -39,6 +57,7 @@ class BarService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
+        unregisterReceiver(screenReceiver)
         instance = null
         volumePopup?.stop()
         volumePopup = null
