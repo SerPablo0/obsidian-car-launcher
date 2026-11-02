@@ -105,6 +105,7 @@
     <string name="settings_idle_clock_desc">After 2 minutes on the home screen without a touch, shows a large clock and the current song on black. Touch anywhere to return.</string>
     <string name="settings_boot_logo">Obsidian boot logo</string>
     <string name="settings_boot_logo_desc">Replaces the start-up logo shown before Android loads. The original is kept and comes back when you turn this off. Visible only after a full restart, since the screen normally sleeps.</string>
+    <string name="settings_boot_logo_failed">Boot logo not changed: %1$s</string>
     <string name="settings_section_start">When the car starts</string>
     <string name="settings_start_resume">Resume music</string>
     <string name="settings_start_resume_desc">Continues the app that played music last (Spotify, YouTube Music…) a few seconds after the screen starts.</string>

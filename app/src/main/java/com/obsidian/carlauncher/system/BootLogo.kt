@@ -22,25 +22,32 @@ object BootLogo {
     /** The app cannot read /data/bootloader itself, so it remembers what it last wrote. */
     fun isApplied(context: Context) = prefs(context).getBoolean(KEY_APPLIED, false)
 
-    fun setApplied(context: Context, applied: Boolean, onDone: (Boolean) -> Unit) {
-        val commands = if (applied) {
-            val source = File(context.cacheDir, ASSET)
+    /** [onDone] gets null on success, or what went wrong. */
+    fun setApplied(context: Context, applied: Boolean, onDone: (String?) -> Unit) {
+        val source = File(context.cacheDir, ASSET)
+        val wanted = if (applied) {
             context.assets.open(ASSET).use { input -> source.outputStream().use { input.copyTo(it) } }
-            listOf(
-                // Keep the NWD logo once; never overwrite that backup.
-                "[ -f $ORIGINAL ] || cp $LOGO $ORIGINAL",
-                // Write beside the target and rename, so a power cut never leaves half a logo.
-                "cp '${source.absolutePath}' $TEMP && mv $TEMP $LOGO && sync",
-                "cmp '${source.absolutePath}' $LOGO",
-            )
+            "'${source.absolutePath}'"
         } else {
-            listOf("[ -f $ORIGINAL ] && cp $ORIGINAL $TEMP && mv $TEMP $LOGO && sync", "cmp $ORIGINAL $LOGO")
+            ORIGINAL
         }
+        val commands = listOfNotNull(
+            // Keep the NWD logo once; never overwrite that backup.
+            if (applied) "[ -f $ORIGINAL ] || cp $LOGO $ORIGINAL" else "[ -f $ORIGINAL ] || { echo 'no saved original logo'; exit 1; }",
+            // Write beside the target and rename, so a power cut never leaves half a logo.
+            "cp $wanted $TEMP && mv $TEMP $LOGO && sync",
+            // toybox on this firmware has md5sum but not cmp.
+            "[ \"\$(md5sum < $wanted)\" = \"\$(md5sum < $LOGO)\" ] || { echo 'logo check failed'; exit 1; }",
+        )
         RootShell.runAsync(context, commands) { result ->
-            val ok = result?.ok == true
-            if (ok) prefs(context).edit().putBoolean(KEY_APPLIED, applied).apply()
             File(context.cacheDir, ASSET).delete()
-            onDone(ok)
+            val error = when {
+                result == null -> "system access is not available"
+                !result.ok -> result.output.ifBlank { "exit code ${result.exitCode}" }
+                else -> null
+            }
+            if (error == null) prefs(context).edit().putBoolean(KEY_APPLIED, applied).apply()
+            onDone(error)
         }
     }
 

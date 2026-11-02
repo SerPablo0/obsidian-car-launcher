@@ -164,11 +164,11 @@ class SettingsActivity : Activity() {
         toggle.isChecked = BootLogo.isApplied(this)
         toggle.setOnCheckedChangeListener { _, checked ->
             toggle.isEnabled = false
-            BootLogo.setApplied(this, checked) { ok ->
+            BootLogo.setApplied(this, checked) { error ->
                 toggle.isEnabled = true
-                if (!ok) {
+                if (error != null) {
                     setCheckedQuietly(toggle, !checked) { bindBootLogo(toggle) }
-                    Toast.makeText(this, R.string.settings_change_failed, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, getString(R.string.settings_boot_logo_failed, error), Toast.LENGTH_LONG).show()
                 }
             }
         }
