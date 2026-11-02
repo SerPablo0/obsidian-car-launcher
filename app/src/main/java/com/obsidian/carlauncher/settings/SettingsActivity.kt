@@ -23,6 +23,7 @@ import com.obsidian.carlauncher.apps.AppEntry
 import com.obsidian.carlauncher.apps.AppPicker
 import com.obsidian.carlauncher.media.NwdMedia
 import com.obsidian.carlauncher.system.AutoStart
+import com.obsidian.carlauncher.system.BootLogo
 import java.util.concurrent.Executors
 import com.obsidian.carlauncher.system.BootOptimizer
 import com.obsidian.carlauncher.system.RootShell
@@ -81,6 +82,7 @@ class SettingsActivity : Activity() {
             isChecked = IdleClock.isEnabled(this@SettingsActivity)
             setOnCheckedChangeListener { _, checked -> IdleClock.setEnabled(this@SettingsActivity, checked) }
         }
+        bindBootLogo(findViewById(R.id.boot_logo))
 
         bindUnusedApps(findViewById(R.id.unused_list))
     }
@@ -154,6 +156,20 @@ class SettingsActivity : Activity() {
                     Toast.makeText(this, message, Toast.LENGTH_LONG).show()
                 }
                 renderBar()
+            }
+        }
+    }
+
+    private fun bindBootLogo(toggle: Switch) {
+        toggle.isChecked = BootLogo.isApplied(this)
+        toggle.setOnCheckedChangeListener { _, checked ->
+            toggle.isEnabled = false
+            BootLogo.setApplied(this, checked) { ok ->
+                toggle.isEnabled = true
+                if (!ok) {
+                    setCheckedQuietly(toggle, !checked) { bindBootLogo(toggle) }
+                    Toast.makeText(this, R.string.settings_change_failed, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
