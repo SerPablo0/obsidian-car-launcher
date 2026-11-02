@@ -55,24 +55,8 @@ object BarControl {
     fun setNwdBarHidden(context: Context, hidden: Boolean, onDone: (Boolean) -> Unit) {
         val appContext = context.applicationContext
         if (hidden) {
-            val commands = listOf(
-                "pm disable-user --user 0 $NWD_BAR_PACKAGE",
-                // Disabling does not stop a persistent app's running process, so its window would
-                // keep the strip. Once disabled, the system cannot restart it.
-                "for pid in \$(pidof $NWD_BAR_PACKAGE); do kill \$pid; done",
-                "true",
-            )
-            RootShell.runAsync(appContext, commands) { result ->
-                if (result?.ok != true) return@runAsync onDone(false)
-                // Give the window manager a moment to drop the stock bar's window.
-                mainHandler.postDelayed({
-                    BarService.instance?.reattach()
-                    if (isReservedBarShowing(appContext)) {
-                        onDone(true)
-                    } else {
-                        setNwdBarHidden(appContext, hidden = false) { onDone(false) }
-                    }
-                }, SWAP_SETTLE_MS)
+            RootShell.runAsync(appContext, listOf("pm disable-user --user 0 $NWD_BAR_PACKAGE")) { result ->
+                if (result?.ok != true) onDone(false) else takeStripFromStockBar(appContext, attempt = 1, onDone)
             }
         } else {
             // Leave the strip free first, or the stock bar cannot add its window.
@@ -92,6 +76,30 @@ object BarControl {
         }
     }
 
+    /**
+     * Disabling does not stop a persistent app's running process, and the system restarts that
+     * process straight away when it is killed, sometimes with its window. A few rounds of
+     * stopping its service and process settle it; observed on the head unit as "works on the second try".
+     */
+    private fun takeStripFromStockBar(context: Context, attempt: Int, onDone: (Boolean) -> Unit) {
+        val commands = listOf(
+            "am stopservice -n $NWD_BAR_PACKAGE/.FloatBar",
+            "for pid in \$(pidof $NWD_BAR_PACKAGE); do kill \$pid; done",
+            "true",
+        )
+        RootShell.runAsync(context, commands) {
+            // Give the window manager a moment to drop the stock bar's window.
+            mainHandler.postDelayed({
+                BarService.instance?.reattach()
+                when {
+                    isReservedBarShowing(context) -> onDone(true)
+                    attempt < SWAP_ATTEMPTS -> takeStripFromStockBar(context, attempt + 1, onDone)
+                    else -> setNwdBarHidden(context, hidden = false) { onDone(false) }
+                }
+            }, SWAP_SETTLE_MS)
+        }
+    }
+
     /** Safety net, run from the home screen: brings the stock bar back if ours is not showing. */
     fun guard(context: Context) {
         if (isNwdBarHidden(context) && !isReservedBarShowing(context)) setNwdBarHidden(context, hidden = false) {}
@@ -107,6 +115,7 @@ object BarControl {
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private const val SWAP_SETTLE_MS = 1_200L
+    private const val SWAP_ATTEMPTS = 4
     private const val STOCK_BAR_START_MS = 3_000L
     private const val STRIP_TAKEN = "already exists"
 }
