@@ -15,8 +15,8 @@ android {
         // types other than TYPE_APPLICATION_OVERLAY, and the bar needs NWD's reserved type 2407.
         // The stock NWD bar does the same (targetSdkVersion 19).
         targetSdk = 25
-        versionCode = 11
-        versionName = "0.6.0"
+        versionCode = 12
+        versionName = "0.7.0"
     }
 
     buildTypes {

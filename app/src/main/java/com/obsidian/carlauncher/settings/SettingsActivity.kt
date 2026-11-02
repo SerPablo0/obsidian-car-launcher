@@ -17,6 +17,12 @@ import com.obsidian.carlauncher.R
 import com.obsidian.carlauncher.bar.BarControl
 import com.obsidian.carlauncher.bar.BarState
 import com.obsidian.carlauncher.bar.VolumePopup
+import com.obsidian.carlauncher.apps.AppCatalog
+import com.obsidian.carlauncher.apps.AppEntry
+import com.obsidian.carlauncher.apps.AppPicker
+import com.obsidian.carlauncher.media.NwdMedia
+import com.obsidian.carlauncher.system.AutoStart
+import java.util.concurrent.Executors
 import com.obsidian.carlauncher.system.BootOptimizer
 import com.obsidian.carlauncher.system.RootShell
 import com.obsidian.carlauncher.system.UnusedApps
@@ -31,6 +37,7 @@ class SettingsActivity : Activity() {
     private lateinit var barHideNwd: Switch
     private lateinit var barStatus: TextView
     private val handler = Handler(Looper.getMainLooper())
+    private val appLoader = Executors.newSingleThreadExecutor()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,12 +75,15 @@ class SettingsActivity : Activity() {
         bindBarSwitches()
         bindVolumeSwitch(findViewById(R.id.volume_popup))
         bindUpdates()
+        bindAutoStart()
 
         bindUnusedApps(findViewById(R.id.unused_list))
     }
 
     override fun onResume() {
         super.onResume()
+        findViewById<TextView>(R.id.diagnostics_nwd_media).text =
+            NwdMedia.diagnostics(this).ifEmpty { getString(R.string.settings_diagnostics_empty) }
         renderBar()
         renderMemory()
         // A cheap no-op command tells us whether system access is approved.
@@ -136,6 +146,40 @@ class SettingsActivity : Activity() {
                     Toast.makeText(this, message, Toast.LENGTH_LONG).show()
                 }
                 renderBar()
+            }
+        }
+    }
+
+    private fun bindAutoStart() {
+        val resume = findViewById<Switch>(R.id.start_resume_music)
+        resume.isChecked = AutoStart.isResumeMusicEnabled(this)
+        resume.setOnCheckedChangeListener { _, checked -> AutoStart.setResumeMusicEnabled(this, checked) }
+
+        val value = findViewById<TextView>(R.id.start_launch_value)
+        val row = findViewById<View>(R.id.start_launch_row)
+        var apps: List<AppEntry> = emptyList()
+
+        fun renderLaunchApp() {
+            val chosen = AutoStart.launchApp(this)
+            value.text = apps.firstOrNull { it.component == chosen }?.label
+                ?: chosen?.packageName
+                ?: getString(R.string.settings_start_launch_none)
+        }
+
+        row.isEnabled = false
+        renderLaunchApp()
+        appLoader.execute {
+            val loaded = AppCatalog.load(this)
+            runOnUiThread {
+                apps = loaded
+                row.isEnabled = true
+                renderLaunchApp()
+            }
+        }
+        row.setOnClickListener {
+            AppPicker.show(this, R.string.settings_start_pick_title, getString(R.string.settings_start_launch_none), apps) { picked ->
+                AutoStart.setLaunchApp(this, picked?.component)
+                renderLaunchApp()
             }
         }
     }
@@ -249,6 +293,7 @@ class SettingsActivity : Activity() {
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
+        appLoader.shutdownNow()
         super.onDestroy()
     }
 

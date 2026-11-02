@@ -11,6 +11,7 @@ import com.obsidian.carlauncher.apps.AppDrawer
 import com.obsidian.carlauncher.bar.BarControl
 import com.obsidian.carlauncher.media.NowPlayingController
 import com.obsidian.carlauncher.settings.SettingsActivity
+import com.obsidian.carlauncher.system.AutoStart
 import com.obsidian.carlauncher.system.BootOptimizer
 
 class HomeActivity : Activity() {
@@ -30,6 +31,7 @@ class HomeActivity : Activity() {
         drawer.onAppsLoaded = shortcuts::bind
 
         BootOptimizer.runIfNeeded(this)
+        AutoStart.runIfNeeded(this)
 
         findViewById<View>(R.id.clock_block).setOnLongClickListener { anchor ->
             showSystemMenu(anchor)

@@ -250,6 +250,60 @@
 
             <TextView
                 style="@style/SettingsSection"
+                android:text="@string/settings_section_start" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="24dp">
+
+                <Switch
+                    android:id="@+id/start_resume_music"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="56dp"
+                    android:text="@string/settings_start_resume"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_start_resume_desc"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="15sp" />
+
+                <LinearLayout
+                    android:id="@+id/start_launch_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="?android:attr/selectableItemBackground"
+                    android:minHeight="56dp"
+                    android:orientation="vertical"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_start_launch"
+                        android:textColor="@color/text_primary"
+                        android:textSize="20sp" />
+
+                    <TextView
+                        android:id="@+id/start_launch_value"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/accent"
+                        android:textSize="16sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                style="@style/SettingsSection"
                 android:text="@string/settings_section_unused" />
 
             <TextView
@@ -268,6 +322,21 @@
                 android:orientation="vertical"
                 android:paddingTop="8dp"
                 android:paddingBottom="8dp" />
+
+            <TextView
+                style="@style/SettingsSection"
+                android:text="@string/settings_section_diagnostics" />
+
+            <TextView
+                android:id="@+id/diagnostics_nwd_media"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:fontFamily="monospace"
+                android:padding="24dp"
+                android:textColor="@color/text_secondary"
+                android:textIsSelectable="true"
+                android:textSize="13sp" />
         </LinearLayout>
     </ScrollView>
 </LinearLayout>

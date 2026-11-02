@@ -10,6 +10,7 @@ import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import com.obsidian.carlauncher.R
+import com.obsidian.carlauncher.media.NwdMedia
 
 /**
  * Hosts the Obsidian bottom bar and performs Back / Home / Recents.
@@ -29,6 +30,8 @@ class BarService : AccessibilityService() {
         instance = this
         attachBar()
         volumePopup = VolumePopup(this).also { it.start() }
+        // Starts listening to the car's own media players from boot, before the home screen appears.
+        NwdMedia.ensureRegistered(this)
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit

@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Outline
+import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
@@ -13,6 +14,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.provider.Settings
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewOutlineProvider
 import android.widget.ImageButton
@@ -24,7 +26,8 @@ import com.obsidian.carlauncher.widget.LineProgressView
 
 /**
  * Drives the "now playing" card from the system's active media sessions.
- * Spotify is preferred; any other playing app (YouTube, NWD music, ...) is shown otherwise.
+ * Spotify is preferred; any other playing app (YouTube, ...) is shown otherwise,
+ * and NWD's radio / Bluetooth / USB players through their own broadcasts ([NwdMedia]).
  */
 class NowPlayingController(private val activity: Activity, root: View) {
 
@@ -45,6 +48,12 @@ class NowPlayingController(private val activity: Activity, root: View) {
     private var controller: MediaController? = null
     private var shownArt: Bitmap? = null
     private var started = false
+
+    /** NWD's own radio / BT / USB players, which have no media session. */
+    private val nwd = NwdMedia
+    private val nwdListener: () -> Unit = { render() }
+    /** True while the card shows an NWD source; the buttons then send media keys instead. */
+    private var nwdActive = false
 
     private val sessionsListener = MediaSessionManager.OnActiveSessionsChangedListener { sessions ->
         attach(pickSession(sessions.orEmpty()))
@@ -68,10 +77,10 @@ class NowPlayingController(private val activity: Activity, root: View) {
         art.clipToOutline = true
 
         root.findViewById<View>(R.id.btn_previous).setOnClickListener {
-            controller?.transportControls?.skipToPrevious()
+            if (nwdActive) sendMediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS) else controller?.transportControls?.skipToPrevious()
         }
         root.findViewById<View>(R.id.btn_next).setOnClickListener {
-            controller?.transportControls?.skipToNext()
+            if (nwdActive) sendMediaKey(KeyEvent.KEYCODE_MEDIA_NEXT) else controller?.transportControls?.skipToNext()
         }
         playButton.setOnClickListener { togglePlayback() }
         root.setOnClickListener { openPlayer() }
@@ -79,6 +88,8 @@ class NowPlayingController(private val activity: Activity, root: View) {
 
     fun start() {
         started = true
+        nwd.ensureRegistered(activity)
+        nwd.addListener(nwdListener)
         if (!hasListenerAccess()) {
             renderNoAccess()
             return
@@ -93,6 +104,7 @@ class NowPlayingController(private val activity: Activity, root: View) {
 
     fun stop() {
         started = false
+        nwd.removeListener(nwdListener)
         sessionManager.removeOnActiveSessionsChangedListener(sessionsListener)
         attach(null)
         handler.removeCallbacks(progressTicker)
@@ -124,6 +136,14 @@ class NowPlayingController(private val activity: Activity, root: View) {
     private fun render() {
         if (!started) return
         val current = controller
+        // A playing app session wins; otherwise a live NWD source (radio, BT music) is shown.
+        val nwdInfo = nwd.info?.takeIf { it.isFresh }
+        nwdActive = current?.isPlaying != true && nwdInfo != null
+        if (nwdActive && nwdInfo != null) {
+            renderNwd(nwdInfo)
+            return
+        }
+        setPlaceholder(R.drawable.ic_music)
         val metadata = current?.metadata
         if (current == null || metadata == null) {
             renderIdle()
@@ -149,7 +169,35 @@ class NowPlayingController(private val activity: Activity, root: View) {
         if (playing) handler.postDelayed(progressTicker, PROGRESS_INTERVAL_MS)
     }
 
+    private fun renderNwd(info: NwdMedia.Info) {
+        handler.removeCallbacks(progressTicker)
+        source.setText(if (info.isRadio) R.string.now_playing_source_radio else R.string.now_playing_source_nwd)
+        title.text = info.title
+        artist.text = info.subtitle
+        showArt(null)
+        setPlaceholder(if (info.isRadio) R.drawable.ic_radio else R.drawable.ic_music)
+        // NWD broadcasts only while a source is playing.
+        playButton.setImageResource(R.drawable.ic_pause)
+        playButton.contentDescription = activity.getString(R.string.cd_pause)
+        val hasTimes = info.durationMs > 0
+        progress.fraction = if (hasTimes) info.positionMs.toFloat() / info.durationMs else 0f
+        position.text = if (hasTimes) formatTime(info.positionMs) else ""
+        duration.text = if (hasTimes) formatTime(info.durationMs) else ""
+    }
+
+    private fun setPlaceholder(icon: Int) {
+        (artPlaceholder as ImageView).setImageResource(icon)
+    }
+
+    private fun sendMediaKey(keyCode: Int) {
+        val audio = activity.getSystemService(AudioManager::class.java)
+        val now = SystemClock.uptimeMillis()
+        audio.dispatchMediaKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0))
+        audio.dispatchMediaKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0))
+    }
+
     private fun renderProgress() {
+        if (nwdActive) return
         val current = controller ?: return
         val state = current.playbackState ?: return
         val total = current.metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION) ?: 0L
@@ -191,6 +239,10 @@ class NowPlayingController(private val activity: Activity, root: View) {
     }
 
     private fun togglePlayback() {
+        if (nwdActive) {
+            sendMediaKey(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
+            return
+        }
         val current = controller
         when {
             current == null -> AppLauncher.startPackage(activity, SPOTIFY)
@@ -200,6 +252,10 @@ class NowPlayingController(private val activity: Activity, root: View) {
     }
 
     private fun openPlayer() {
+        if (nwdActive) {
+            AppLauncher.startPackage(activity, if (nwd.info?.isRadio == true) NWD_RADIO else NWD_MUSIC)
+            return
+        }
         if (!hasListenerAccess()) {
             AppLauncher.start(activity, Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
             return
@@ -240,6 +296,8 @@ class NowPlayingController(private val activity: Activity, root: View) {
 
     private companion object {
         const val SPOTIFY = "com.spotify.music"
+        const val NWD_RADIO = "com.nwd.radio"
+        const val NWD_MUSIC = "com.nwd.android.music.ui"
         const val PROGRESS_INTERVAL_MS = 1000L
 
         fun formatTime(ms: Long): String {

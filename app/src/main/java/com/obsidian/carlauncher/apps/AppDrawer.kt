@@ -4,14 +4,10 @@ import android.app.Activity
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.LauncherApps
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.os.Process
 import android.os.UserHandle
 import android.provider.Settings
 import android.view.LayoutInflater
@@ -23,7 +19,6 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.obsidian.carlauncher.AppLauncher
 import com.obsidian.carlauncher.R
-import java.text.Collator
 import java.util.concurrent.Executors
 
 /**
@@ -57,8 +52,6 @@ class AppDrawer(private val activity: Activity, private val root: View, private 
     }
 
     val isOpen: Boolean get() = root.visibility == View.VISIBLE
-
-    private val iconSizePx = activity.resources.getDimensionPixelSize(R.dimen.app_icon_size)
 
     init {
         list.layoutManager = GridLayoutManager(activity, COLUMNS)
@@ -105,12 +98,7 @@ class AppDrawer(private val activity: Activity, private val root: View, private 
 
     private fun reload() {
         loader.execute {
-            val user = Process.myUserHandle()
-            val collator = Collator.getInstance()
-            val apps = launcherApps.getActivityList(null, user)
-                .filter { it.componentName.packageName != activity.packageName }
-                .map { AppEntry(it.label.toString(), it.componentName, user, prerender(it.getIcon(0))) }
-                .sortedWith { a, b -> collator.compare(a.label, b.label) }
+            val apps = AppCatalog.load(activity)
             mainHandler.post {
                 loaded = true
                 this.apps = apps
@@ -118,18 +106,6 @@ class AppDrawer(private val activity: Activity, private val root: View, private 
                 onAppsLoaded?.invoke()
             }
         }
-    }
-
-    /**
-     * Draws an icon once into a bitmap of its on-screen size. App icons are often large
-     * adaptive drawables with several layers; scrolling then only blits small bitmaps.
-     */
-    private fun prerender(icon: Drawable): Drawable {
-        val bitmap = Bitmap.createBitmap(iconSizePx, iconSizePx, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        icon.setBounds(0, 0, iconSizePx, iconSizePx)
-        icon.draw(canvas)
-        return BitmapDrawable(activity.resources, bitmap)
     }
 
     private fun launch(app: AppEntry) {
