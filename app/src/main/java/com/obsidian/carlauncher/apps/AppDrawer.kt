@@ -34,6 +34,13 @@ class AppDrawer(private val activity: Activity, private val root: View) {
 
     private var loaded = false
 
+    /** Every launchable app, sorted by label; empty until the first background load finishes. */
+    var apps: List<AppEntry> = emptyList()
+        private set
+
+    /** Called on the main thread each time [apps] is (re)loaded. */
+    var onAppsLoaded: (() -> Unit)? = null
+
     /** Reloads the list whenever an app is installed, removed or updated. */
     private val packageCallback = object : LauncherApps.Callback() {
         override fun onPackageAdded(packageName: String, user: UserHandle) = reload()
@@ -93,7 +100,9 @@ class AppDrawer(private val activity: Activity, private val root: View) {
                 .sortedWith { a, b -> collator.compare(a.label, b.label) }
             mainHandler.post {
                 loaded = true
+                this.apps = apps
                 adapter.submit(apps)
+                onAppsLoaded?.invoke()
             }
         }
     }

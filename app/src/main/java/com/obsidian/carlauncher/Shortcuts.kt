@@ -1,62 +1,153 @@
 package com.obsidian.carlauncher
 
 import android.app.Activity
+import android.app.AlertDialog
+import android.content.ComponentName
+import android.content.Context
+import android.content.res.ColorStateList
 import android.provider.Settings
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.BaseAdapter
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.annotation.IdRes
 import androidx.annotation.StringRes
+import com.obsidian.carlauncher.apps.AppEntry
 
-/** The fixed row of five shortcuts under the media card. */
-object Shortcuts {
+/**
+ * The row of five shortcuts under the media card. The first four can be changed
+ * with a long press; the last one always opens the app drawer.
+ */
+class Shortcuts(
+    private val activity: Activity,
+    private val row: ViewGroup,
+    /** Apps already loaded by the drawer, sorted by label. */
+    private val apps: () -> List<AppEntry>,
+    private val onAllApps: () -> Unit,
+) {
 
-    private class Shortcut(
+    private class Default(
         @IdRes val viewId: Int,
         @StringRes val label: Int,
         @DrawableRes val icon: Int,
-        /** Candidate packages, in order of preference. Empty means "open the app drawer". */
-        val packages: (Activity) -> List<String>,
+        /** Candidate packages, in order of preference. */
+        val packages: (Context) -> List<String>,
     )
 
-    private val shortcuts = listOf(
-        Shortcut(R.id.shortcut_maps, R.string.shortcut_maps, R.drawable.ic_maps) { activity ->
+    private val defaults = listOf(
+        Default(R.id.shortcut_maps, R.string.shortcut_maps, R.drawable.ic_maps) { context ->
             // The NWD firmware stores the user's chosen navigation app in this system setting.
             listOfNotNull(
-                Settings.System.getString(activity.contentResolver, "navigation_packagename"),
+                Settings.System.getString(context.contentResolver, "navigation_packagename"),
                 "com.google.android.apps.maps",
             )
         },
-        Shortcut(R.id.shortcut_zlink, R.string.shortcut_zlink, R.drawable.ic_zlink) {
-            listOf("com.zjinnova.zlink")
-        },
-        Shortcut(R.id.shortcut_phone, R.string.shortcut_phone, R.drawable.ic_phone) {
-            listOf("com.nwd.android.phone")
-        },
-        Shortcut(R.id.shortcut_radio, R.string.shortcut_radio, R.drawable.ic_radio) {
-            listOf("com.nwd.radio")
-        },
-        Shortcut(R.id.shortcut_apps, R.string.shortcut_apps, R.drawable.ic_apps) { emptyList() },
+        Default(R.id.shortcut_zlink, R.string.shortcut_zlink, R.drawable.ic_zlink) { listOf("com.zjinnova.zlink") },
+        Default(R.id.shortcut_phone, R.string.shortcut_phone, R.drawable.ic_phone) { listOf("com.nwd.android.phone") },
+        Default(R.id.shortcut_radio, R.string.shortcut_radio, R.drawable.ic_radio) { listOf("com.nwd.radio") },
     )
 
-    fun bind(activity: Activity, row: ViewGroup, onAllApps: () -> Unit) {
-        for (shortcut in shortcuts) {
-            val item = row.findViewById<View>(shortcut.viewId)
-            val label = activity.getString(shortcut.label)
-            item.findViewById<ImageView>(R.id.icon).setImageResource(shortcut.icon)
-            item.findViewById<TextView>(R.id.label).text = label
-            item.contentDescription = label
+    private val prefs = activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    fun bind() {
+        defaults.forEachIndexed { slot, default -> bindSlot(slot, default) }
+
+        val appsItem = row.findViewById<View>(R.id.shortcut_apps)
+        val appsLabel = activity.getString(R.string.shortcut_apps)
+        appsItem.findViewById<ImageView>(R.id.icon).setImageResource(R.drawable.ic_apps)
+        appsItem.findViewById<TextView>(R.id.label).text = appsLabel
+        appsItem.contentDescription = appsLabel
+        appsItem.setOnClickListener { onAllApps() }
+    }
+
+    private fun bindSlot(slot: Int, default: Default) {
+        val item = row.findViewById<View>(default.viewId)
+        val icon = item.findViewById<ImageView>(R.id.icon)
+        val labelView = item.findViewById<TextView>(R.id.label)
+        val custom = customApp(slot)
+
+        val label: String
+        if (custom != null) {
+            label = custom.label
+            // Full-colour app icons are shown as they are.
+            icon.imageTintList = null
+            icon.setImageDrawable(custom.icon)
+            item.setOnClickListener { AppLauncher.startComponent(activity, custom.component) }
+        } else {
+            label = activity.getString(default.label)
+            icon.imageTintList = ColorStateList.valueOf(activity.getColor(R.color.text_primary))
+            icon.setImageResource(default.icon)
             item.setOnClickListener {
-                val candidates = shortcut.packages(activity)
-                if (candidates.isEmpty()) {
-                    onAllApps()
-                } else if (candidates.none { AppLauncher.startPackage(activity, it) }) {
+                if (default.packages(activity).none { AppLauncher.startPackage(activity, it) }) {
                     Toast.makeText(activity, activity.getString(R.string.app_not_installed, label), Toast.LENGTH_SHORT).show()
                 }
             }
         }
+        labelView.text = label
+        item.contentDescription = label
+        item.setOnLongClickListener {
+            showPicker(slot, default)
+            true
+        }
+    }
+
+    /** The app saved for this slot, if it is still installed. */
+    private fun customApp(slot: Int): AppEntry? {
+        val component = prefs.getString(key(slot), null)?.let(ComponentName::unflattenFromString) ?: return null
+        return apps().firstOrNull { it.component == component }
+    }
+
+    private fun showPicker(slot: Int, default: Default) {
+        val choices = apps()
+        if (choices.isEmpty()) return
+        val adapter = PickerAdapter(activity, activity.getString(R.string.shortcut_reset, activity.getString(default.label)), choices)
+        AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(R.string.shortcut_pick_title)
+            .setAdapter(adapter) { _, position ->
+                prefs.edit().apply {
+                    if (position == 0) remove(key(slot)) else putString(key(slot), choices[position - 1].component.flattenToString())
+                }.apply()
+                bindSlot(slot, default)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    /** First row resets the slot; the rest are the installed apps. */
+    private class PickerAdapter(
+        private val context: Context,
+        private val resetLabel: String,
+        private val choices: List<AppEntry>,
+    ) : BaseAdapter() {
+
+        override fun getCount() = choices.size + 1
+        override fun getItem(position: Int): Any? = if (position == 0) null else choices[position - 1]
+        override fun getItemId(position: Int) = position.toLong()
+
+        override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+            val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.item_picker, parent, false)
+            val icon = view.findViewById<ImageView>(R.id.picker_icon)
+            val label = view.findViewById<TextView>(R.id.picker_label)
+            if (position == 0) {
+                icon.setImageResource(R.drawable.ic_close)
+                icon.imageTintList = ColorStateList.valueOf(context.getColor(R.color.text_secondary))
+                label.text = resetLabel
+            } else {
+                val app = choices[position - 1]
+                icon.imageTintList = null
+                icon.setImageDrawable(app.icon)
+                label.text = app.label
+            }
+            return view
+        }
+    }
+
+    private companion object {
+        const val PREFS = "shortcuts"
+        fun key(slot: Int) = "slot_$slot"
     }
 }

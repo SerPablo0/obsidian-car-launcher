@@ -8,6 +8,8 @@
     <string name="shortcut_phone">Phone</string>
     <string name="shortcut_radio">Radio</string>
     <string name="shortcut_apps">All apps</string>
+    <string name="shortcut_pick_title">Choose an app for this shortcut</string>
+    <string name="shortcut_reset">Default (%1$s)</string>
 
     <string name="now_playing_idle_title">Nothing playing</string>
     <string name="now_playing_idle_source">Spotify</string>
@@ -80,6 +82,17 @@
     <string name="settings_bar_hide_nwd">Hide the original NWD bar</string>
     <string name="settings_bar_hide_nwd_desc">Moves the Obsidian bar into the strip the original bar uses now. If the Obsidian bar ever stops, the original bar comes back by itself.</string>
     <string name="settings_bar_state_ready_to_swap">Status: ready. The original NWD bar holds the reserved strip; turn on Hide the original NWD bar to move the Obsidian bar into it.</string>
+    <string name="settings_section_updates">Updates</string>
+    <string name="settings_update_version">Obsidian %1$s</string>
+    <string name="settings_update_idle">Checks GitHub for a newer version.</string>
+    <string name="settings_update_checking">Checking…</string>
+    <string name="settings_update_latest">You have the latest version.</string>
+    <string name="settings_update_available">Version %1$s is available.\n%2$s</string>
+    <string name="settings_update_failed">Could not check: %1$s. Is the screen connected to the internet?</string>
+    <string name="settings_update_installing">Downloading and installing. The screen returns to the home screen by itself when it is done.</string>
+    <string name="settings_update_install_failed">Install failed: %1$s</string>
+    <string name="settings_update_check">Check for updates</string>
+    <string name="settings_update_install">Install %1$s</string>
     <string name="settings_section_volume">Volume</string>
     <string name="settings_volume_popup">Obsidian volume popup</string>
     <string name="settings_volume_popup_desc">Replaces the original volume window shown when you turn the left knob. The knob keeps controlling the volume exactly as before. Needs the Obsidian bottom bar to be on.</string>

@@ -19,6 +19,7 @@ import com.obsidian.carlauncher.bar.VolumePopup
 import com.obsidian.carlauncher.system.BootOptimizer
 import com.obsidian.carlauncher.system.RootShell
 import com.obsidian.carlauncher.system.UnusedApps
+import com.obsidian.carlauncher.system.Updater
 
 /** Speed tweaks and the list of NWD apps this car does not need. */
 class SettingsActivity : Activity() {
@@ -64,6 +65,7 @@ class SettingsActivity : Activity() {
         barStatus = findViewById(R.id.bar_status)
         bindBarSwitches()
         bindVolumeSwitch(findViewById(R.id.volume_popup))
+        bindUpdates()
 
         bindUnusedApps(findViewById(R.id.unused_list))
     }
@@ -132,6 +134,41 @@ class SettingsActivity : Activity() {
                     Toast.makeText(this, message, Toast.LENGTH_LONG).show()
                 }
                 renderBar()
+            }
+        }
+    }
+
+    private fun bindUpdates() {
+        val version = findViewById<TextView>(R.id.update_version)
+        val status = findViewById<TextView>(R.id.update_status)
+        val button = findViewById<Button>(R.id.update_button)
+        val installed = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty()
+        version.text = getString(R.string.settings_update_version, installed)
+
+        button.setOnClickListener {
+            button.isEnabled = false
+            status.setText(R.string.settings_update_checking)
+            Updater.check { release, error ->
+                button.isEnabled = true
+                when {
+                    release == null -> status.text = getString(R.string.settings_update_failed, error)
+                    !Updater.isNewer(release.version, installed) -> status.setText(R.string.settings_update_latest)
+                    else -> offerInstall(release, status, button)
+                }
+            }
+        }
+    }
+
+    private fun offerInstall(release: Updater.Release, status: TextView, button: Button) {
+        status.text = getString(R.string.settings_update_available, release.version, release.notes.trim())
+        button.text = getString(R.string.settings_update_install, release.version)
+        button.setOnClickListener {
+            button.isEnabled = false
+            status.setText(R.string.settings_update_installing)
+            Updater.install(this, release) { ok, error ->
+                // Reached only if the install did not replace and restart the app.
+                button.isEnabled = true
+                if (!ok) status.text = getString(R.string.settings_update_install_failed, error)
             }
         }
     }

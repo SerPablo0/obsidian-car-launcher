@@ -24,7 +24,10 @@ class HomeActivity : Activity() {
 
         drawer = AppDrawer(this, findViewById(R.id.drawer))
         nowPlaying = NowPlayingController(this, findViewById(R.id.now_playing))
-        Shortcuts.bind(this, findViewById(R.id.shortcuts), onAllApps = drawer::open)
+        val shortcuts = Shortcuts(this, findViewById(R.id.shortcuts), apps = { drawer.apps }, onAllApps = drawer::open)
+        shortcuts.bind()
+        // Custom shortcuts need the app list; refresh once it arrives and after installs or removals.
+        drawer.onAppsLoaded = shortcuts::bind
 
         BootOptimizer.runIfNeeded(this)
 
