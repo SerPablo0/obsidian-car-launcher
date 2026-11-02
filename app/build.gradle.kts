@@ -11,9 +11,12 @@ android {
         applicationId = "com.obsidian.carlauncher"
         // The head unit runs Android 10 (API 29) with a 32-bit userspace.
         minSdk = 29
-        targetSdk = 29
-        versionCode = 3
-        versionName = "0.3.0"
+        // Below 26 on purpose: Android only lets apps targeting pre-O use system-alert window
+        // types other than TYPE_APPLICATION_OVERLAY, and the bar needs NWD's reserved type 2407.
+        // The stock NWD bar does the same (targetSdkVersion 19).
+        targetSdk = 25
+        versionCode = 4
+        versionName = "0.3.1"
     }
 
     buildTypes {

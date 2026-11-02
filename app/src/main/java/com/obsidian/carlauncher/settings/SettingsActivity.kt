@@ -138,7 +138,7 @@ class SettingsActivity : Activity() {
         setCheckedQuietly(barHideNwd, nwdHidden) { bindBarSwitches() }
         // Hiding is only offered while ours occupies the reserved strip; un-hiding is always allowed.
         barHideNwd.isEnabled = nwdHidden || BarControl.isReservedBarShowing(this)
-        barStatus.setText(
+        val state = getString(
             when {
                 !serviceOn -> R.string.settings_bar_state_off
                 !BarState.attached && BarState.lastMode(this) == BarState.MODE_FAILED -> R.string.settings_bar_state_failed
@@ -147,6 +147,9 @@ class SettingsActivity : Activity() {
                 else -> R.string.settings_bar_state_overlay
             },
         )
+        // Show the system's reasons when the reserved strip was refused, so they can be reported.
+        val errors = if (serviceOn && !BarControl.isReservedBarShowing(this)) BarState.lastErrors(this) else ""
+        barStatus.text = if (errors.isEmpty()) state else "$state\n$errors"
     }
 
     private fun setCheckedQuietly(toggle: Switch, checked: Boolean, rebind: () -> Unit) {

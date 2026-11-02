@@ -40,22 +40,24 @@ class BarService : AccessibilityService() {
     private fun attachBar() {
         if (barView != null) return
         val windowManager = getSystemService(WindowManager::class.java)
-        val view = LayoutInflater.from(ContextThemeWrapper(this, R.style.Theme_Obsidian))
-            .inflate(R.layout.view_bar, null)
-        bindButtons(view)
+        val inflater = LayoutInflater.from(ContextThemeWrapper(this, R.style.Theme_Obsidian))
+        val errors = mutableListOf<String>()
 
         // Reserved type first; plain accessibility overlay if this firmware refuses it.
         for ((type, mode) in listOf(TYPE_INSTRUMENT_PANEL to BarState.MODE_RESERVED, TYPE_ACCESSIBILITY_OVERLAY to BarState.MODE_OVERLAY)) {
+            // A fresh view per attempt: a view from a refused addView must not be reused.
+            val view = inflater.inflate(R.layout.view_bar, null)
+            bindButtons(view)
             try {
                 windowManager.addView(view, layoutParams(type))
                 barView = view
-                BarState.setAttached(this, mode)
+                BarState.setAttached(this, mode, errors.joinToString("\n"))
                 return
             } catch (e: RuntimeException) {
-                // Try the next window type.
+                errors += "type $type: ${e.javaClass.simpleName}: ${e.message}"
             }
         }
-        BarState.setAttached(this, BarState.MODE_FAILED)
+        BarState.setAttached(this, BarState.MODE_FAILED, errors.joinToString("\n"))
     }
 
     private fun detachBar() {
@@ -105,15 +107,23 @@ object BarState {
 
     private const val PREFS = "bar"
     private const val KEY_MODE = "mode"
+    private const val KEY_ERRORS = "errors"
 
     @Volatile
     var attached: Boolean = false
         private set
 
-    fun setAttached(context: Context, mode: String) {
+    fun setAttached(context: Context, mode: String, errors: String) {
         attached = mode != MODE_FAILED
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_MODE, mode).apply()
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_MODE, mode)
+            .putString(KEY_ERRORS, errors)
+            .apply()
     }
+
+    /** Why the preferred window types were refused on the last attempt, for the settings page. */
+    fun lastErrors(context: Context): String =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_ERRORS, null).orEmpty()
 
     fun setDetached() {
         attached = false
