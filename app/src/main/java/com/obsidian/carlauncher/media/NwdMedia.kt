@@ -26,15 +26,20 @@ object NwdMedia {
         val isRadio: Boolean,
         val positionMs: Long,
         val durationMs: Long,
-        /** Uptime of the last broadcast, to tell live sources from stale ones. */
-        val receivedAt: Long,
+        /** Uptime of the last play-time broadcast; 0 until one arrives. */
+        val lastTickAt: Long,
     ) {
-        val isFresh: Boolean get() = SystemClock.uptimeMillis() - receivedAt < FRESH_MS
+        /**
+         * The NWD music app announces its last track at every boot without playing it, so a
+         * track name alone proves nothing. Only a source whose play time keeps ticking is playing.
+         */
+        val isPlaying: Boolean get() = lastTickAt > 0 && SystemClock.uptimeMillis() - lastTickAt < TICK_TIMEOUT_MS
     }
 
     private const val ACTION_INFO = "com.nwd.action.send_media_play_info"
     private const val ACTION_TIME = "com.nwd.action.send_media_play_time"
-    private const val FRESH_MS = 5 * 60_000L
+    /** Play-time broadcasts come about once a second while playing. */
+    const val TICK_TIMEOUT_MS = 4_000L
 
     private const val PREFS = "nwd_media"
     private const val KEY_LAST_INFO = "last_info"
@@ -116,7 +121,8 @@ object NwdMedia {
             isRadio = isRadio,
             positionMs = extras.millis("extra_media_current_position", "extra_playtime"),
             durationMs = extras.millis("extra_meida_duration", "extra_media_total_time"),
-            receivedAt = SystemClock.uptimeMillis(),
+            // A new track keeps the tick of the one before, so a source that was already playing stays shown.
+            lastTickAt = info?.lastTickAt ?: 0,
         )
     }
 
@@ -128,7 +134,7 @@ object NwdMedia {
             .takeIf { it > 0 } ?: current.positionMs,
         durationMs = extras.millis("extra_meida_duration", "extra_media_total_time", "extra_widgettotaltime")
             .takeIf { it > 0 } ?: current.durationMs,
-        receivedAt = SystemClock.uptimeMillis(),
+        lastTickAt = SystemClock.uptimeMillis(),
     )
 
     private fun Bundle.text(vararg keys: String): String? =

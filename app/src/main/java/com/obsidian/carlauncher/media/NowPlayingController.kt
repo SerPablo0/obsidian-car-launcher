@@ -22,6 +22,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import com.obsidian.carlauncher.AppLauncher
 import com.obsidian.carlauncher.R
+import com.obsidian.carlauncher.system.AutoStart
 import com.obsidian.carlauncher.widget.LineProgressView
 
 /**
@@ -52,6 +53,7 @@ class NowPlayingController(private val activity: Activity, root: View) {
     /** NWD's own radio / BT / USB players, which have no media session. */
     private val nwd = NwdMedia
     private val nwdListener: () -> Unit = { render() }
+    private val nwdRecheck = Runnable { render() }
     /** True while the card shows an NWD source; the buttons then send media keys instead. */
     private var nwdActive = false
 
@@ -105,6 +107,7 @@ class NowPlayingController(private val activity: Activity, root: View) {
     fun stop() {
         started = false
         nwd.removeListener(nwdListener)
+        handler.removeCallbacks(nwdRecheck)
         sessionManager.removeOnActiveSessionsChangedListener(sessionsListener)
         attach(null)
         handler.removeCallbacks(progressTicker)
@@ -137,7 +140,7 @@ class NowPlayingController(private val activity: Activity, root: View) {
         if (!started) return
         val current = controller
         // A playing app session wins; otherwise a live NWD source (radio, BT music) is shown.
-        val nwdInfo = nwd.info?.takeIf { it.isFresh }
+        val nwdInfo = nwd.info?.takeIf { it.isPlaying }
         nwdActive = current?.isPlaying != true && nwdInfo != null
         if (nwdActive && nwdInfo != null) {
             renderNwd(nwdInfo)
@@ -161,6 +164,8 @@ class NowPlayingController(private val activity: Activity, root: View) {
         )
 
         val playing = current.isPlaying
+        // Remembered so music can resume in the same app after the next start.
+        if (playing) AutoStart.rememberPlayer(activity, current.packageName)
         playButton.setImageResource(if (playing) R.drawable.ic_pause else R.drawable.ic_play)
         playButton.contentDescription = activity.getString(if (playing) R.string.cd_pause else R.string.cd_play)
 
@@ -171,6 +176,9 @@ class NowPlayingController(private val activity: Activity, root: View) {
 
     private fun renderNwd(info: NwdMedia.Info) {
         handler.removeCallbacks(progressTicker)
+        // When the ticks stop, nothing else tells us; look again just after they would time out.
+        handler.removeCallbacks(nwdRecheck)
+        handler.postDelayed(nwdRecheck, NwdMedia.TICK_TIMEOUT_MS + 500)
         source.setText(if (info.isRadio) R.string.now_playing_source_radio else R.string.now_playing_source_nwd)
         title.text = info.title
         artist.text = info.subtitle
