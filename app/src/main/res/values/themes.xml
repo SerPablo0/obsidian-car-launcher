@@ -37,7 +37,11 @@
         <item name="android:colorAccent">@color/accent_white</item>
     </style>
 
-    <style name="SettingsRadio">
+    <!--
+        The platform parent matters for radios built in code (the accent picker): without it they
+        lose the default radio style, so they draw no circle and ignore taps.
+    -->
+    <style name="SettingsRadio" parent="android:Widget.DeviceDefault.CompoundButton.RadioButton">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:minHeight">56dp</item>

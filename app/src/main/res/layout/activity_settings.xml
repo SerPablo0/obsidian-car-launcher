@@ -36,7 +36,9 @@
             android:tint="@color/text_primary" />
     </LinearLayout>
 
+    <!-- The id lets Android keep the scroll position when the page is rebuilt for a new accent. -->
     <ScrollView
+        android:id="@+id/settings_scroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scrollbars="none">
