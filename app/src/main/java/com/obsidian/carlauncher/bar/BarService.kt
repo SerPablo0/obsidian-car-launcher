@@ -22,11 +22,13 @@ import com.obsidian.carlauncher.R
 class BarService : AccessibilityService() {
 
     private var barView: View? = null
+    private var volumePopup: VolumePopup? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
         attachBar()
+        volumePopup = VolumePopup(this).also { it.start() }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
@@ -35,6 +37,8 @@ class BarService : AccessibilityService() {
 
     override fun onDestroy() {
         instance = null
+        volumePopup?.stop()
+        volumePopup = null
         detachBar()
         super.onDestroy()
     }

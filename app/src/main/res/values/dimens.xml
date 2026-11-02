@@ -6,4 +6,7 @@
     <dimen name="bar_knob_column">150dp</dimen>
     <!-- Keeps the knob labels clear of the physical knobs over the corners. -->
     <dimen name="bar_knob_inset">84dp</dimen>
+    <dimen name="volume_popup_width">600dp</dimen>
+    <!-- Just under the 48 px status bar. -->
+    <dimen name="volume_popup_top">72dp</dimen>
 </resources>

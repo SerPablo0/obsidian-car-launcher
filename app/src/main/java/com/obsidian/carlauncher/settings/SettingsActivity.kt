@@ -15,6 +15,7 @@ import android.widget.Toast
 import com.obsidian.carlauncher.R
 import com.obsidian.carlauncher.bar.BarControl
 import com.obsidian.carlauncher.bar.BarState
+import com.obsidian.carlauncher.bar.VolumePopup
 import com.obsidian.carlauncher.system.BootOptimizer
 import com.obsidian.carlauncher.system.RootShell
 import com.obsidian.carlauncher.system.UnusedApps
@@ -62,6 +63,7 @@ class SettingsActivity : Activity() {
         barHideNwd = findViewById(R.id.bar_hide_nwd)
         barStatus = findViewById(R.id.bar_status)
         bindBarSwitches()
+        bindVolumeSwitch(findViewById(R.id.volume_popup))
 
         bindUnusedApps(findViewById(R.id.unused_list))
     }
@@ -130,6 +132,20 @@ class SettingsActivity : Activity() {
                     Toast.makeText(this, message, Toast.LENGTH_LONG).show()
                 }
                 renderBar()
+            }
+        }
+    }
+
+    private fun bindVolumeSwitch(toggle: Switch) {
+        toggle.isChecked = VolumePopup.isEnabled(this)
+        toggle.setOnCheckedChangeListener { _, checked ->
+            toggle.isEnabled = false
+            VolumePopup.setEnabled(this, checked) { ok ->
+                toggle.isEnabled = true
+                if (!ok) {
+                    setCheckedQuietly(toggle, !checked) { bindVolumeSwitch(toggle) }
+                    Toast.makeText(this, R.string.settings_change_failed, Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
