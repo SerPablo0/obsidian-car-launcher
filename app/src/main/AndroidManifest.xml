@@ -84,6 +84,15 @@
             android:screenOrientation="nosensor"
             android:taskAffinity="" />
 
+        <!-- Returns to the home screen after an update; see UpdateReceiver. -->
+        <receiver
+            android:name=".system.UpdateReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name=".bar.BarService"
             android:exported="true"

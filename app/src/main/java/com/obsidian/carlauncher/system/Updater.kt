@@ -53,8 +53,7 @@ object Updater {
 
     /**
      * Downloads the APK into app storage and installs it with `pm install -r`.
-     * On success the system replaces this app and restarts it, so [onDone] usually
-     * only runs on failure.
+     * On success the system replaces this app, so [onDone] usually only runs on failure.
      */
     fun install(context: Context, release: Release, onDone: (Boolean, String?) -> Unit) {
         val appContext = context.applicationContext
@@ -63,15 +62,9 @@ object Updater {
             val error = try {
                 httpGet(release.apkUrl).use { input -> file.outputStream().use { input.copyTo(it) } }
                 // adbd runs as root, so it can read the file straight from our cache directory.
-                // Installing kills this app, and the system would then show whatever app was used
-                // last; the same shell keeps running, so it opens the home screen right after.
-                val result = RootShell.runBlocking(
-                    appContext,
-                    listOf(
-                        "pm install -r '${file.absolutePath}' && " +
-                            "am start -a android.intent.action.MAIN -c android.intent.category.HOME >/dev/null",
-                    ),
-                )
+                // A successful install kills this app together with its adb connection, so nothing
+                // after `pm install` runs; the new version opens the home screen itself (UpdateReceiver).
+                val result = RootShell.runBlocking(appContext, listOf("pm install -r '${file.absolutePath}'"))
                 when {
                     result == null -> "system access is not available"
                     !result.ok || !result.output.contains("Success") -> result.output.ifBlank { "install failed" }
