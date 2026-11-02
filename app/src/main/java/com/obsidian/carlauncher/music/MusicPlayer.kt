@@ -1,6 +1,9 @@
 package com.obsidian.carlauncher.music
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -8,6 +11,7 @@ import android.media.MediaMetadata
 import android.media.MediaPlayer
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
+import android.os.SystemClock
 import java.io.IOException
 
 /**
@@ -18,8 +22,13 @@ import java.io.IOException
 object MusicPlayer {
 
     private const val RESTART_THRESHOLD_MS = 3_000
+    /** The longest screen-off still taken for the blackout while the engine is cranked. */
+    private const val BLACKOUT_MAX_MS = 20_000L
 
     private var appContext: Context? = null
+    private var screenWatched = false
+    /** When switching the car off paused the music; 0 otherwise. */
+    private var pausedForSleepAt = 0L
     private var player: MediaPlayer? = null
     private var session: MediaSession? = null
     private var focusRequest: AudioFocusRequest? = null
@@ -42,8 +51,38 @@ object MusicPlayer {
     /** Main thread. */
     fun play(context: Context, songs: List<Music.LocalSong>, start: Int) {
         appContext = context.applicationContext
+        watchScreen(context.applicationContext)
         queue = songs
         load(start, autoplay = true)
+    }
+
+    /**
+     * Switching the car off only turns the screen off. Music left playing kept the head unit awake,
+     * draining the car battery, and was still going at the next start; so it pauses then. Cranking
+     * the engine turns the screen off for a moment too, and the music carries on after that.
+     */
+    private fun watchScreen(context: Context) {
+        if (screenWatched) return
+        screenWatched = true
+        context.registerReceiver(object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                when (intent.action) {
+                    Intent.ACTION_SCREEN_OFF -> if (isPlaying) {
+                        pause()
+                        abandonFocus()
+                        pausedForSleepAt = SystemClock.elapsedRealtime()
+                    }
+                    Intent.ACTION_SCREEN_ON -> {
+                        val pausedAt = pausedForSleepAt
+                        pausedForSleepAt = 0L
+                        if (pausedAt > 0 && SystemClock.elapsedRealtime() - pausedAt < BLACKOUT_MAX_MS) resume()
+                    }
+                }
+            }
+        }, IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        })
     }
 
     fun toggle() = if (isPlaying) pause() else resume()
