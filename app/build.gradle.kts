@@ -12,8 +12,8 @@ android {
         // The head unit runs Android 10 (API 29) with a 32-bit userspace.
         minSdk = 29
         targetSdk = 29
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
     }
 
     buildTypes {

@@ -67,4 +67,21 @@
     <string name="cd_pause">Pause</string>
     <string name="cd_next">Next track</string>
     <string name="cd_close">Close</string>
+    <string name="cd_back">Back</string>
+    <string name="cd_home">Home</string>
+    <string name="cd_recents">Recent apps</string>
+
+    <string name="bar_service_label">Obsidian bottom bar</string>
+    <string name="bar_service_description">Shows the Obsidian bottom bar and performs Back, Home and Recent apps. It does not read screen content.</string>
+
+    <string name="settings_section_bar">Bottom bar</string>
+    <string name="settings_bar_enable">Obsidian bottom bar</string>
+    <string name="settings_bar_enable_desc">Back, Home and Recent apps. Long-press Recent apps for split screen.</string>
+    <string name="settings_bar_hide_nwd">Hide the original NWD bar</string>
+    <string name="settings_bar_hide_nwd_desc">Available once the Obsidian bar is running in the reserved strip. If the Obsidian bar ever stops, the original bar comes back by itself.</string>
+    <string name="settings_bar_state_off">Status: off</string>
+    <string name="settings_bar_state_reserved">Status: running in the reserved strip</string>
+    <string name="settings_bar_state_overlay">Status: running as an overlay only. Keep the NWD bar.</string>
+    <string name="settings_bar_state_failed">Status: could not show the bar</string>
+    <string name="settings_bar_state_starting">Status: starting…</string>
 </resources>

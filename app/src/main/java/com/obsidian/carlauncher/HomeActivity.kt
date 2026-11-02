@@ -8,6 +8,7 @@ import android.provider.Settings
 import android.view.View
 import android.widget.PopupMenu
 import com.obsidian.carlauncher.apps.AppDrawer
+import com.obsidian.carlauncher.bar.BarControl
 import com.obsidian.carlauncher.media.NowPlayingController
 import com.obsidian.carlauncher.settings.SettingsActivity
 import com.obsidian.carlauncher.system.BootOptimizer
@@ -36,9 +37,12 @@ class HomeActivity : Activity() {
     override fun onStart() {
         super.onStart()
         nowPlaying.start()
+        // Gives the bar service time to bind after boot before judging that it is missing.
+        root.postDelayed(barGuard, BAR_GUARD_DELAY_MS)
     }
 
     override fun onStop() {
+        root.removeCallbacks(barGuard)
         nowPlaying.stop()
         super.onStop()
     }
@@ -47,6 +51,10 @@ class HomeActivity : Activity() {
         drawer.release()
         super.onDestroy()
     }
+
+    private val root: View get() = findViewById(R.id.root)
+
+    private val barGuard = Runnable { BarControl.guard(this) }
 
     // Home is delivered here while we are already running: return to the clean home screen.
     override fun onNewIntent(intent: Intent) {
@@ -78,6 +86,7 @@ class HomeActivity : Activity() {
 
     private companion object {
         const val CAR_SETTINGS_PACKAGE = "com.android.car.setting"
+        const val BAR_GUARD_DELAY_MS = 10_000L
     }
 }
 

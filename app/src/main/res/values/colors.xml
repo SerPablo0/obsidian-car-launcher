@@ -10,4 +10,7 @@
     <color name="track">#2A2E35</color>
     <color name="accent">#2EE6A6</color>
     <color name="ripple">#26FFFFFF</color>
+    <color name="bar_bg">#070809</color>
+    <color name="bar_border">#1C1F24</color>
+    <color name="bar_hint">#6E747D</color>
 </resources>

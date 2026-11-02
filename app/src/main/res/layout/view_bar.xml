@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    768 x 140, the strip NWD reserves at the bottom of the screen.
+    The two physical knobs sit over the lower corners, so the side columns only
+    carry labels for them and every touch target stays in the middle.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/bar_height"
+    android:background="@drawable/bg_bar"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:layout_width="@dimen/bar_knob_column"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:importantForAccessibility="noHideDescendants"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/bar_knob_inset">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_plus"
+            android:tint="@color/bar_hint" />
+
+        <ImageView
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:src="@drawable/ic_volume"
+            android:tint="@color/accent" />
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_minus"
+            android:tint="@color/bar_hint" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/bar_back"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:background="@drawable/bg_round_button"
+            android:contentDescription="@string/cd_back"
+            android:padding="24dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_back"
+            android:tint="@color/text_label" />
+
+        <ImageButton
+            android:id="@+id/bar_home"
+            android:layout_width="84dp"
+            android:layout_height="84dp"
+            android:layout_marginStart="36dp"
+            android:layout_marginEnd="36dp"
+            android:background="@drawable/bg_home_ring"
+            android:contentDescription="@string/cd_home"
+            android:padding="26dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_home"
+            android:tint="@color/text_primary" />
+
+        <ImageButton
+            android:id="@+id/bar_recents"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:background="@drawable/bg_round_button"
+            android:contentDescription="@string/cd_recents"
+            android:padding="25dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_recents"
+            android:tint="@color/text_label" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="@dimen/bar_knob_column"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:importantForAccessibility="noHideDescendants"
+        android:orientation="vertical"
+        android:paddingEnd="@dimen/bar_knob_inset">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_next"
+            android:tint="@color/bar_hint" />
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:src="@drawable/ic_music"
+            android:tint="@color/accent" />
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_previous"
+            android:tint="@color/bar_hint" />
+    </LinearLayout>
+</LinearLayout>

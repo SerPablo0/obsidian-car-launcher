@@ -3,6 +3,8 @@ package com.obsidian.carlauncher.settings
 import android.app.Activity
 import android.app.ActivityManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
@@ -11,6 +13,8 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import com.obsidian.carlauncher.R
+import com.obsidian.carlauncher.bar.BarControl
+import com.obsidian.carlauncher.bar.BarState
 import com.obsidian.carlauncher.system.BootOptimizer
 import com.obsidian.carlauncher.system.RootShell
 import com.obsidian.carlauncher.system.UnusedApps
@@ -20,6 +24,10 @@ class SettingsActivity : Activity() {
 
     private lateinit var status: TextView
     private lateinit var memory: TextView
+    private lateinit var barEnable: Switch
+    private lateinit var barHideNwd: Switch
+    private lateinit var barStatus: TextView
+    private val handler = Handler(Looper.getMainLooper())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,11 +58,17 @@ class SettingsActivity : Activity() {
             }
         }
 
+        barEnable = findViewById(R.id.bar_enable)
+        barHideNwd = findViewById(R.id.bar_hide_nwd)
+        barStatus = findViewById(R.id.bar_status)
+        bindBarSwitches()
+
         bindUnusedApps(findViewById(R.id.unused_list))
     }
 
     override fun onResume() {
         super.onResume()
+        renderBar()
         renderMemory()
         // A cheap no-op command tells us whether system access is approved.
         RootShell.runAsync(this, listOf("true")) { renderStatus(it) }
@@ -97,6 +111,51 @@ class SettingsActivity : Activity() {
         }
     }
 
+    private fun bindBarSwitches() {
+        barEnable.setOnCheckedChangeListener { _, checked ->
+            barEnable.isEnabled = false
+            barStatus.setText(R.string.settings_bar_state_starting)
+            BarControl.setServiceEnabled(this, checked) { ok ->
+                barEnable.isEnabled = true
+                if (!ok) Toast.makeText(this, R.string.settings_change_failed, Toast.LENGTH_SHORT).show()
+                // The system binds the service a moment after the setting changes.
+                handler.postDelayed(::renderBar, BAR_SETTLE_MS)
+            }
+        }
+        barHideNwd.setOnCheckedChangeListener { _, checked ->
+            barHideNwd.isEnabled = false
+            BarControl.setNwdBarHidden(this, checked) { ok ->
+                if (!ok) Toast.makeText(this, R.string.settings_change_failed, Toast.LENGTH_SHORT).show()
+                handler.postDelayed(::renderBar, BAR_SETTLE_MS)
+            }
+        }
+    }
+
+    private fun renderBar() {
+        val serviceOn = BarControl.isServiceEnabled(this)
+        val nwdHidden = BarControl.isNwdBarHidden(this)
+        setCheckedQuietly(barEnable, serviceOn) { bindBarSwitches() }
+        setCheckedQuietly(barHideNwd, nwdHidden) { bindBarSwitches() }
+        // Hiding is only offered while ours occupies the reserved strip; un-hiding is always allowed.
+        barHideNwd.isEnabled = nwdHidden || BarControl.isReservedBarShowing(this)
+        barStatus.setText(
+            when {
+                !serviceOn -> R.string.settings_bar_state_off
+                !BarState.attached && BarState.lastMode(this) == BarState.MODE_FAILED -> R.string.settings_bar_state_failed
+                !BarState.attached -> R.string.settings_bar_state_starting
+                BarState.lastMode(this) == BarState.MODE_RESERVED -> R.string.settings_bar_state_reserved
+                else -> R.string.settings_bar_state_overlay
+            },
+        )
+    }
+
+    private fun setCheckedQuietly(toggle: Switch, checked: Boolean, rebind: () -> Unit) {
+        if (toggle.isChecked == checked) return
+        toggle.setOnCheckedChangeListener(null)
+        toggle.isChecked = checked
+        rebind()
+    }
+
     private fun renderStatus(result: RootShell.Result?) {
         // Any reply at all means adbd accepted our key; command failures are reported separately.
         status.setText(if (result != null) R.string.settings_status_ready else R.string.settings_status_unavailable)
@@ -106,5 +165,14 @@ class SettingsActivity : Activity() {
         val info = ActivityManager.MemoryInfo()
         getSystemService(ActivityManager::class.java).getMemoryInfo(info)
         memory.text = getString(R.string.settings_memory, info.availMem / (1024 * 1024), info.totalMem / (1024 * 1024))
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
+        super.onDestroy()
+    }
+
+    private companion object {
+        const val BAR_SETTLE_MS = 1_500L
     }
 }

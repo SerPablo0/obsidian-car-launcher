@@ -4,6 +4,8 @@
     <!-- Loopback connection to the head unit's adbd for the speed tweaks. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
+    <!-- Granted through appops by the settings page; lets the bar use NWD's reserved window type. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:allowBackup="false"
@@ -42,6 +44,19 @@
             android:exported="false"
             android:screenOrientation="nosensor"
             android:taskAffinity="" />
+
+        <service
+            android:name=".bar.BarService"
+            android:exported="true"
+            android:label="@string/bar_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/bar_service" />
+        </service>
 
         <!-- Gives the home screen read access to media sessions (Spotify and others). -->
         <service
