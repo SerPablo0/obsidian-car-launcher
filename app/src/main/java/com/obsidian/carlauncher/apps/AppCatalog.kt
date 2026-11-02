@@ -8,6 +8,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.os.Process
 import com.obsidian.carlauncher.R
+import com.obsidian.carlauncher.music.MusicActivity
 import java.text.Collator
 
 /** Loads every launchable app with its icon pre-rendered at on-screen size. Call off the main thread. */
@@ -19,7 +20,8 @@ object AppCatalog {
         val user = Process.myUserHandle()
         val collator = Collator.getInstance()
         return launcherApps.getActivityList(null, user)
-            .filter { it.componentName.packageName != context.packageName }
+            // The launcher itself is left out, but its Music screen is listed like an app.
+            .filter { it.componentName.packageName != context.packageName || it.componentName.className == MusicActivity::class.java.name }
             .map { AppEntry(it.label.toString(), it.componentName, user, prerender(context, it.getIcon(0), iconSizePx)) }
             .sortedWith { a, b -> collator.compare(a.label, b.label) }
     }

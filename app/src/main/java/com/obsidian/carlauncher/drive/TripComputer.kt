@@ -64,7 +64,9 @@ object TripComputer {
     private const val KEY_LIMIT = "speed_limit"
     private const val KEY_BEEP = "beep"
     private const val KEY_AUTO_DRIVE = "auto_drive"
-    private const val KEY_ASKED = "asked_permission"
+    // 0.10 kept a plain "asked" flag that a closed question used up; these keys replace it.
+    private const val KEY_ANSWERED = "location_answered"
+    private const val KEY_BLOCKED = "location_blocked"
     private const val KEY_DRIVE_ID = "drive_id"
     private const val KEY_DRIVE_STARTED = "drive_started"
     private const val KEY_DRIVE_DISTANCE = "drive_distance"
@@ -143,6 +145,8 @@ object TripComputer {
     private var lastBeepAt = -BEEP_GAP_MS
     /** Drive in which driving mode was already shown; it opens by itself once per drive. */
     private var driveModeShownIn = -1L
+    /** The location question is on screen; see [onPermissionResult]. */
+    private var asking = false
 
     /** Safe to call often: from the bar service at boot and from the home screen. */
     fun start(context: Context) {
@@ -190,24 +194,42 @@ object TripComputer {
 
     /** Asks for location access; once Android stops showing the question, opens the app's settings page instead. */
     fun requestPermission(activity: Activity) {
-        val prefs = prefs(activity)
-        val androidStoppedAsking = prefs.getBoolean(KEY_ASKED, false) &&
-            !activity.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
-        if (androidStoppedAsking) {
+        if (prefs(activity).getBoolean(KEY_BLOCKED, false)) {
             AppLauncher.start(
                 activity,
                 Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", activity.packageName, null)),
             )
         } else {
-            prefs.edit().putBoolean(KEY_ASKED, true).apply()
+            asking = true
             activity.requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_LOCATION)
         }
     }
 
-    /** The first time the home screen starts with the speedometer on, asks without waiting for a tap. */
+    /**
+     * Asks without waiting for a tap until the driver has answered once. The question can be
+     * closed before an answer (an update reopening the home screen did that), so it comes back.
+     */
     fun requestPermissionOnce(activity: Activity) {
         load(activity)
-        if (enabled && !hasPermission(activity) && !prefs(activity).getBoolean(KEY_ASKED, false)) requestPermission(activity)
+        if (enabled && !asking && !hasPermission(activity) && !prefs(activity).getBoolean(KEY_ANSWERED, false)) {
+            requestPermission(activity)
+        }
+    }
+
+    /** From each activity's onRequestPermissionsResult. */
+    fun onPermissionResult(activity: Activity, grantResults: IntArray) {
+        asking = false
+        // Empty results mean the question was closed without an answer: it is asked again later.
+        if (grantResults.isNotEmpty()) {
+            val granted = grantResults[0] == PackageManager.PERMISSION_GRANTED
+            val androidStopsAsking = !granted &&
+                !activity.shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)
+            prefs(activity).edit()
+                .putBoolean(KEY_ANSWERED, true)
+                .putBoolean(KEY_BLOCKED, androidStopsAsking)
+                .apply()
+        }
+        refresh()
     }
 
     fun shouldAutoOpenDriveMode(): Boolean =

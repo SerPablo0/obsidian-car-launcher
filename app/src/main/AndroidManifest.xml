@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Driving mode reads the head unit's GPS to show the current speed. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- The Music screen saves songs in the shared Music folder, where the head unit's player finds them. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="false"
@@ -55,6 +57,25 @@
             android:launchMode="singleInstance"
             android:screenOrientation="nosensor"
             android:taskAffinity="" />
+
+        <!--
+            Listed in the app drawer like an app of its own, so it can also be put on a home shortcut.
+            singleTask keeps the last search when it is opened again.
+        -->
+        <activity
+            android:name=".music.MusicActivity"
+            android:exported="true"
+            android:icon="@drawable/ic_launcher_music"
+            android:label="@string/music_app_name"
+            android:launchMode="singleTask"
+            android:screenOrientation="nosensor"
+            android:taskAffinity="com.obsidian.carlauncher.music"
+            android:windowSoftInputMode="adjustResize|stateHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".drive.DriveActivity"

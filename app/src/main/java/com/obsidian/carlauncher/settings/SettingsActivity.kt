@@ -120,7 +120,7 @@ class SettingsActivity : Activity() {
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         if (requestCode != TripComputer.REQUEST_LOCATION) return
-        TripComputer.refresh()
+        TripComputer.onPermissionResult(this, grantResults)
         speedometer.render()
     }
 

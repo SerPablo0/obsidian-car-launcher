@@ -15,8 +15,8 @@ android {
         // types other than TYPE_APPLICATION_OVERLAY, and the bar needs NWD's reserved type 2407.
         // The stock NWD bar does the same (targetSdkVersion 19).
         targetSdk = 25
-        versionCode = 21
-        versionName = "0.10.1"
+        versionCode = 22
+        versionName = "0.11.0"
     }
 
     buildTypes {
@@ -30,6 +30,8 @@ android {
     }
 
     compileOptions {
+        // NewPipeExtractor uses Java library APIs newer than Android 10 has.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -47,4 +49,8 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     // Pure-Kotlin ADB client, used to reach the head unit's root adbd over loopback.
     implementation("dev.mobile:dadb:2.0.0")
+    // Searches YouTube Music and finds a song's audio stream for the Music screen (GPL-3.0).
+    // Pinned to the same commit the NewPipe app ships, which keeps up with YouTube changes.
+    implementation("com.github.TeamNewPipe:NewPipeExtractor:e8f89145a830b4d6cae32412007f24ea8b36c73a")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.5")
 }

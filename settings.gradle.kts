@@ -11,6 +11,8 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // NewPipeExtractor and its JSON library are only published through JitPack.
+        maven("https://jitpack.io")
     }
 }
 

@@ -102,7 +102,7 @@ class DriveActivity : Activity() {
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (requestCode == TripComputer.REQUEST_LOCATION) TripComputer.refresh()
+        if (requestCode == TripComputer.REQUEST_LOCATION) TripComputer.onPermissionResult(this, grantResults)
     }
 
     private fun stat(@IdRes id: Int, @StringRes label: Int): TextView {

@@ -14,6 +14,7 @@ import com.obsidian.carlauncher.bar.BarControl
 import com.obsidian.carlauncher.drive.DriveActivity
 import com.obsidian.carlauncher.drive.SpeedCard
 import com.obsidian.carlauncher.drive.TripComputer
+import com.obsidian.carlauncher.music.MusicActivity
 import com.obsidian.carlauncher.media.NowPlayingController
 import com.obsidian.carlauncher.settings.SettingsActivity
 import com.obsidian.carlauncher.system.AutoStart
@@ -47,7 +48,6 @@ class HomeActivity : Activity() {
         AutoStart.runIfNeeded(this)
         TripComputer.start(this)
         speedCard = SpeedCard(this, findViewById(R.id.speed_block), onDriving = ::autoOpenDriveMode)
-        TripComputer.requestPermissionOnce(this)
 
         val clockBlock = findViewById<View>(R.id.clock_block)
         clockBlock.setOnClickListener { openDriveMode() }
@@ -84,11 +84,14 @@ class HomeActivity : Activity() {
         renderMaintenanceBanner()
         // Location access may have been changed in Android's settings meanwhile.
         TripComputer.refresh()
+        root.postDelayed(askLocation, ASK_LOCATION_DELAY_MS)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (requestCode == TripComputer.REQUEST_LOCATION) TripComputer.refresh()
+        if (requestCode == TripComputer.REQUEST_LOCATION) TripComputer.onPermissionResult(this, grantResults)
     }
+
+    private val askLocation = Runnable { TripComputer.requestPermissionOnce(this) }
 
     private fun openDriveMode() {
         AppLauncher.start(this, Intent(this, DriveActivity::class.java))
@@ -117,6 +120,7 @@ class HomeActivity : Activity() {
 
     override fun onPause() {
         inFront = false
+        root.removeCallbacks(askLocation)
         idleClock.pause()
         super.onPause()
     }
@@ -157,6 +161,9 @@ class HomeActivity : Activity() {
                 openDriveMode()
                 true
             }
+            menu.add(R.string.menu_music).setOnMenuItemClickListener {
+                AppLauncher.start(this@HomeActivity, Intent(this@HomeActivity, MusicActivity::class.java))
+            }
             menu.add(R.string.menu_obsidian_settings).setOnMenuItemClickListener {
                 AppLauncher.start(this@HomeActivity, Intent(this@HomeActivity, SettingsActivity::class.java))
             }
@@ -175,6 +182,9 @@ class HomeActivity : Activity() {
     private companion object {
         const val CAR_SETTINGS_PACKAGE = "com.android.car.setting"
         const val BAR_GUARD_DELAY_MS = 10_000L
+        // The in-app updater reopens the home screen a moment after installing, which closed a
+        // question asked straight away; waiting a little lets it settle first.
+        const val ASK_LOCATION_DELAY_MS = 3_000L
     }
 }
 
