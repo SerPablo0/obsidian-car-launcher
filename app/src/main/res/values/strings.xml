@@ -78,7 +78,9 @@
     <string name="settings_bar_enable">Obsidian bottom bar</string>
     <string name="settings_bar_enable_desc">Back, Home and Recent apps. Long-press Recent apps for split screen.</string>
     <string name="settings_bar_hide_nwd">Hide the original NWD bar</string>
-    <string name="settings_bar_hide_nwd_desc">Available once the Obsidian bar is running in the reserved strip. If the Obsidian bar ever stops, the original bar comes back by itself.</string>
+    <string name="settings_bar_hide_nwd_desc">Moves the Obsidian bar into the strip the original bar uses now. If the Obsidian bar ever stops, the original bar comes back by itself.</string>
+    <string name="settings_bar_state_ready_to_swap">Status: ready. The original NWD bar holds the reserved strip; turn on Hide the original NWD bar to move the Obsidian bar into it.</string>
+    <string name="settings_bar_swap_failed">The Obsidian bar could not take the strip, so the original NWD bar was restored.</string>
     <string name="settings_bar_state_off">Status: off</string>
     <string name="settings_bar_state_reserved">Status: running in the reserved strip</string>
     <string name="settings_bar_state_overlay">Status: running as an overlay only. Keep the NWD bar.</string>

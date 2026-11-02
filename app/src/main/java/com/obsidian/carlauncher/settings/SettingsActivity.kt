@@ -125,8 +125,11 @@ class SettingsActivity : Activity() {
         barHideNwd.setOnCheckedChangeListener { _, checked ->
             barHideNwd.isEnabled = false
             BarControl.setNwdBarHidden(this, checked) { ok ->
-                if (!ok) Toast.makeText(this, R.string.settings_change_failed, Toast.LENGTH_SHORT).show()
-                handler.postDelayed(::renderBar, BAR_SETTLE_MS)
+                if (!ok) {
+                    val message = if (checked) R.string.settings_bar_swap_failed else R.string.settings_change_failed
+                    Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                }
+                renderBar()
             }
         }
     }
@@ -136,19 +139,21 @@ class SettingsActivity : Activity() {
         val nwdHidden = BarControl.isNwdBarHidden(this)
         setCheckedQuietly(barEnable, serviceOn) { bindBarSwitches() }
         setCheckedQuietly(barHideNwd, nwdHidden) { bindBarSwitches() }
-        // Hiding is only offered while ours occupies the reserved strip; un-hiding is always allowed.
-        barHideNwd.isEnabled = nwdHidden || BarControl.isReservedBarShowing(this)
+        val stripHeldByStock = BarControl.isStripHeldByStockBar(this)
+        // Hiding is offered only when ours can take the reserved strip; un-hiding is always allowed.
+        barHideNwd.isEnabled = nwdHidden || (serviceOn && (BarControl.isReservedBarShowing(this) || stripHeldByStock))
         val state = getString(
             when {
                 !serviceOn -> R.string.settings_bar_state_off
                 !BarState.attached && BarState.lastMode(this) == BarState.MODE_FAILED -> R.string.settings_bar_state_failed
                 !BarState.attached -> R.string.settings_bar_state_starting
                 BarState.lastMode(this) == BarState.MODE_RESERVED -> R.string.settings_bar_state_reserved
+                stripHeldByStock -> R.string.settings_bar_state_ready_to_swap
                 else -> R.string.settings_bar_state_overlay
             },
         )
-        // Show the system's reasons when the reserved strip was refused, so they can be reported.
-        val errors = if (serviceOn && !BarControl.isReservedBarShowing(this)) BarState.lastErrors(this) else ""
+        // Show the system's reasons when the reserved strip was refused for any other cause, so they can be reported.
+        val errors = if (serviceOn && !BarControl.isReservedBarShowing(this) && !stripHeldByStock) BarState.lastErrors(this) else ""
         barStatus.text = if (errors.isEmpty()) state else "$state\n$errors"
     }
 

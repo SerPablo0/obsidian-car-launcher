@@ -25,6 +25,7 @@ class BarService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        instance = this
         attachBar()
     }
 
@@ -33,9 +34,19 @@ class BarService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
+        instance = null
         detachBar()
         super.onDestroy()
     }
+
+    /** Re-runs window placement, e.g. right after the stock bar released the reserved strip. Main thread only. */
+    fun reattach() {
+        detachBar()
+        attachBar()
+    }
+
+    /** Removes the bar window without stopping the service. Main thread only. */
+    fun detach() = detachBar()
 
     private fun attachBar() {
         if (barView != null) return
@@ -92,10 +103,15 @@ class BarService : AccessibilityService() {
         title = "ObsidianBar"
     }
 
-    private companion object {
+    companion object {
+        /** The running service, if the system has bound it; the bar lives in the launcher's process. */
+        @Volatile
+        var instance: BarService? = null
+            private set
+
         /** NWD firmware addition (framework WindowManager.LayoutParams, value read from framework.jar). */
-        const val TYPE_INSTRUMENT_PANEL = 2407
-        const val TYPE_ACCESSIBILITY_OVERLAY = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+        private const val TYPE_INSTRUMENT_PANEL = 2407
+        private const val TYPE_ACCESSIBILITY_OVERLAY = WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
     }
 }
 
