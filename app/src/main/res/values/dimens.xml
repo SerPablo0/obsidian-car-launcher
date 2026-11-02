@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="art_radius">18dp</dimen>
+    <!-- Must match the icon ImageView in item_app.xml: icons are pre-rendered at this size. -->
+    <dimen name="app_icon_size">64dp</dimen>
     <!-- Matches the 140 px strip the NWD firmware reserves (density is 160, so dp = px). -->
     <dimen name="bar_height">140dp</dimen>
     <dimen name="bar_knob_column">150dp</dimen>

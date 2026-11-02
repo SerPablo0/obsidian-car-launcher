@@ -22,7 +22,7 @@ class HomeActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
-        drawer = AppDrawer(this, findViewById(R.id.drawer))
+        drawer = AppDrawer(this, findViewById(R.id.drawer), homeContent = findViewById(R.id.home))
         nowPlaying = NowPlayingController(this, findViewById(R.id.now_playing))
         val shortcuts = Shortcuts(this, findViewById(R.id.shortcuts), apps = { drawer.apps }, onAllApps = drawer::open)
         shortcuts.bind()

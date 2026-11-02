@@ -4,6 +4,9 @@ import android.app.Activity
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.LauncherApps
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Handler
@@ -23,8 +26,11 @@ import com.obsidian.carlauncher.R
 import java.text.Collator
 import java.util.concurrent.Executors
 
-/** Full-screen grid of every launchable app, shown on top of the home screen. */
-class AppDrawer(private val activity: Activity, private val root: View) {
+/**
+ * Full-screen grid of every launchable app, shown on top of the home screen.
+ * [homeContent] is hidden while the drawer covers it, so each scroll frame paints one screen, not two.
+ */
+class AppDrawer(private val activity: Activity, private val root: View, private val homeContent: View) {
 
     private val launcherApps = activity.getSystemService(LauncherApps::class.java)
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -52,11 +58,15 @@ class AppDrawer(private val activity: Activity, private val root: View) {
 
     val isOpen: Boolean get() = root.visibility == View.VISIBLE
 
+    private val iconSizePx = activity.resources.getDimensionPixelSize(R.dimen.app_icon_size)
+
     init {
         list.layoutManager = GridLayoutManager(activity, COLUMNS)
         list.adapter = adapter
         list.setHasFixedSize(true)
         list.setItemViewCacheSize(COLUMNS * 2)
+        // Rows never animate; item animations only cost frames when the list is refreshed.
+        list.itemAnimator = null
         root.findViewById<View>(R.id.drawer_close).setOnClickListener { close(animate = true) }
         launcherApps.registerCallback(packageCallback, mainHandler)
         // Load in the background right away so the first open is instant.
@@ -70,12 +80,15 @@ class AppDrawer(private val activity: Activity, private val root: View) {
         root.alpha = 0f
         root.translationY = OPEN_OFFSET_PX
         root.visibility = View.VISIBLE
-        root.animate().alpha(1f).translationY(0f).setDuration(ANIMATION_MS).withLayer().start()
+        root.animate().alpha(1f).translationY(0f).setDuration(ANIMATION_MS).withLayer()
+            .withEndAction { homeContent.visibility = View.INVISIBLE }
+            .start()
     }
 
     fun close(animate: Boolean) {
         if (!isOpen) return
         root.animate().cancel()
+        homeContent.visibility = View.VISIBLE
         if (!animate) {
             root.visibility = View.GONE
             return
@@ -96,7 +109,7 @@ class AppDrawer(private val activity: Activity, private val root: View) {
             val collator = Collator.getInstance()
             val apps = launcherApps.getActivityList(null, user)
                 .filter { it.componentName.packageName != activity.packageName }
-                .map { AppEntry(it.label.toString(), it.componentName, user, it.getIcon(0)) }
+                .map { AppEntry(it.label.toString(), it.componentName, user, prerender(it.getIcon(0))) }
                 .sortedWith { a, b -> collator.compare(a.label, b.label) }
             mainHandler.post {
                 loaded = true
@@ -105,6 +118,18 @@ class AppDrawer(private val activity: Activity, private val root: View) {
                 onAppsLoaded?.invoke()
             }
         }
+    }
+
+    /**
+     * Draws an icon once into a bitmap of its on-screen size. App icons are often large
+     * adaptive drawables with several layers; scrolling then only blits small bitmaps.
+     */
+    private fun prerender(icon: Drawable): Drawable {
+        val bitmap = Bitmap.createBitmap(iconSizePx, iconSizePx, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        icon.setBounds(0, 0, iconSizePx, iconSizePx)
+        icon.draw(canvas)
+        return BitmapDrawable(activity.resources, bitmap)
     }
 
     private fun launch(app: AppEntry) {
