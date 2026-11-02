@@ -13,16 +13,43 @@ import java.util.concurrent.Executors
  */
 object BootOptimizer {
 
+    /**
+     * How the four A53 cores pick their speed. Measured on the head unit (All apps scrolling):
+     * stock schedutil 10.8% janky frames, performance 2.7% — schedutil ramps up too late on touch.
+     */
+    enum class CpuMode(val governor: String, val minFreqKhz: Int) {
+        /** Firmware default: 408 MHz floor. */
+        BALANCED("schedutil", 408_000),
+        /** Never drops below 1.2 GHz, so touch starts at speed; still scales up to 1.46 GHz. */
+        RESPONSIVE("schedutil", 1_200_000),
+        /** Always 1.46 GHz. */
+        MAXIMUM("performance", 408_000),
+    }
+
     /** Kernel settings reset at boot, so they are written again each time. */
-    val SPEED_TWEAKS = listOf(
-        // ksmd scans memory nonstop and costs a quarter of the A100's CPU.
-        "echo 0 > /sys/kernel/mm/ksm/run",
-        // deadline suits eMMC better than cfq.
-        "echo deadline > /sys/block/mmcblk0/queue/scheduler",
-    )
+    fun speedTweaks(context: Context): List<String> {
+        val mode = cpuMode(context)
+        return listOf(
+            // ksmd scans memory nonstop and costs a quarter of the A100's CPU.
+            "echo 0 > /sys/kernel/mm/ksm/run",
+            // deadline suits eMMC better than cfq.
+            "echo deadline > /sys/block/mmcblk0/queue/scheduler",
+            "for p in /sys/devices/system/cpu/cpu[0-3]/cpufreq; do " +
+                "echo ${mode.governor} > \$p/scaling_governor; echo ${mode.minFreqKhz} > \$p/scaling_min_freq; done",
+        )
+    }
+
+    fun cpuMode(context: Context): CpuMode =
+        prefs(context).getString(KEY_CPU_MODE, null)?.let { saved -> CpuMode.values().firstOrNull { it.name == saved } }
+            ?: CpuMode.BALANCED
+
+    fun setCpuMode(context: Context, mode: CpuMode) {
+        prefs(context).edit().putString(KEY_CPU_MODE, mode.name).apply()
+    }
 
     private const val PREFS = "boot_optimizer"
     private const val KEY_ENABLED = "enabled"
+    private const val KEY_CPU_MODE = "cpu_mode"
     private const val KEY_LAST_BOOT = "last_boot_id"
     private const val KEY_WALLPAPER_DONE = "wallpaper_done"
 
@@ -42,7 +69,7 @@ object BootOptimizer {
             if (!isEnabled(appContext)) return@execute
             val bootId = currentBootId() ?: return@execute
             if (prefs(appContext).getString(KEY_LAST_BOOT, null) == bootId) return@execute
-            if (RootShell.runBlocking(appContext, SPEED_TWEAKS)?.ok == true) {
+            if (RootShell.runBlocking(appContext, speedTweaks(appContext))?.ok == true) {
                 prefs(appContext).edit().putString(KEY_LAST_BOOT, bootId).apply()
             }
         }
@@ -62,6 +89,13 @@ object BootOptimizer {
         } catch (e: Exception) {
             // Retried on the next start.
         }
+    }
+
+    /** CPU temperature in °C, or null if the thermal zone is not readable. */
+    fun cpuTemperature(): Int? = try {
+        File("/sys/class/thermal/thermal_zone0/temp").readText().trim().toInt() / 1000
+    } catch (e: Exception) {
+        null
     }
 
     private fun currentBootId(): String? = try {

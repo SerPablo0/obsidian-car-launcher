@@ -128,6 +128,36 @@
                     android:textColor="@color/text_secondary"
                     android:textSize="15sp" />
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/settings_cpu_title"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp" />
+
+                <RadioGroup
+                    android:id="@+id/cpu_mode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp">
+
+                    <RadioButton
+                        android:id="@+id/cpu_balanced"
+                        style="@style/SettingsRadio"
+                        android:text="@string/settings_cpu_balanced" />
+
+                    <RadioButton
+                        android:id="@+id/cpu_responsive"
+                        style="@style/SettingsRadio"
+                        android:text="@string/settings_cpu_responsive" />
+
+                    <RadioButton
+                        android:id="@+id/cpu_maximum"
+                        style="@style/SettingsRadio"
+                        android:text="@string/settings_cpu_maximum" />
+                </RadioGroup>
+
                 <Button
                     android:id="@+id/apply_now"
                     android:layout_width="wrap_content"

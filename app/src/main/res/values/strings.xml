@@ -34,6 +34,11 @@
     <string name="settings_speed_tweaks">Speed tweaks at every start</string>
     <string name="settings_speed_tweaks_desc">Stops the kernel memory scanner (ksmd), which uses about a quarter of the CPU, and switches storage to the deadline scheduler. Android resets both on every boot, so they are applied again each time the car starts.</string>
     <string name="settings_apply_now">Apply now</string>
+    <string name="settings_cpu_title">Processor speed</string>
+    <string name="settings_cpu_balanced">Balanced: factory setting, slows down to 408 MHz when idle</string>
+    <string name="settings_cpu_responsive">Responsive: never below 1.2 GHz, so touches start at speed</string>
+    <string name="settings_cpu_maximum">Maximum: always 1.46 GHz, smoothest, runs warmest</string>
+    <string name="settings_temperature">Processor temperature: %1$d °C</string>
     <string name="settings_section_unused">Unused car features</string>
     <string name="settings_unused_desc">Turning a feature off disables the app without removing it. Turn it back on here at any time.</string>
     <string name="settings_change_failed">Could not change it. Check system access above.</string>

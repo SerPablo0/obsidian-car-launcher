@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.RadioGroup
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
@@ -44,10 +45,11 @@ class SettingsActivity : Activity() {
         tweaks.setOnCheckedChangeListener { _, checked -> BootOptimizer.setEnabled(this, checked) }
 
         val applyNow = findViewById<Button>(R.id.apply_now)
+        bindCpuMode(findViewById(R.id.cpu_mode), onChanged = { applyNow.performClick() })
         applyNow.setOnClickListener {
             applyNow.isEnabled = false
             status.setText(R.string.settings_status_connecting)
-            RootShell.runAsync(this, BootOptimizer.SPEED_TWEAKS) { result ->
+            RootShell.runAsync(this, BootOptimizer.speedTweaks(this)) { result ->
                 applyNow.isEnabled = true
                 renderStatus(result)
                 renderMemory()
@@ -138,6 +140,21 @@ class SettingsActivity : Activity() {
         }
     }
 
+    private fun bindCpuMode(group: RadioGroup, onChanged: () -> Unit) {
+        val buttons = mapOf(
+            BootOptimizer.CpuMode.BALANCED to R.id.cpu_balanced,
+            BootOptimizer.CpuMode.RESPONSIVE to R.id.cpu_responsive,
+            BootOptimizer.CpuMode.MAXIMUM to R.id.cpu_maximum,
+        )
+        group.check(buttons.getValue(BootOptimizer.cpuMode(this)))
+        group.setOnCheckedChangeListener { _, checkedId ->
+            val mode = buttons.entries.firstOrNull { it.value == checkedId }?.key ?: return@setOnCheckedChangeListener
+            BootOptimizer.setCpuMode(this, mode)
+            // Applied right away as well as at every boot.
+            onChanged()
+        }
+    }
+
     private fun bindUpdates() {
         val version = findViewById<TextView>(R.id.update_version)
         val status = findViewById<TextView>(R.id.update_status)
@@ -225,7 +242,9 @@ class SettingsActivity : Activity() {
     private fun renderMemory() {
         val info = ActivityManager.MemoryInfo()
         getSystemService(ActivityManager::class.java).getMemoryInfo(info)
-        memory.text = getString(R.string.settings_memory, info.availMem / (1024 * 1024), info.totalMem / (1024 * 1024))
+        val memoryLine = getString(R.string.settings_memory, info.availMem / (1024 * 1024), info.totalMem / (1024 * 1024))
+        val temperature = BootOptimizer.cpuTemperature()
+        memory.text = if (temperature == null) memoryLine else "$memoryLine\n${getString(R.string.settings_temperature, temperature)}"
     }
 
     override fun onDestroy() {
