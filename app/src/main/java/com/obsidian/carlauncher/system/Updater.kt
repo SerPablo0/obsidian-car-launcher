@@ -63,7 +63,15 @@ object Updater {
             val error = try {
                 httpGet(release.apkUrl).use { input -> file.outputStream().use { input.copyTo(it) } }
                 // adbd runs as root, so it can read the file straight from our cache directory.
-                val result = RootShell.runBlocking(appContext, listOf("pm install -r '${file.absolutePath}'"))
+                // Installing kills this app, and the system would then show whatever app was used
+                // last; the same shell keeps running, so it opens the home screen right after.
+                val result = RootShell.runBlocking(
+                    appContext,
+                    listOf(
+                        "pm install -r '${file.absolutePath}' && " +
+                            "am start -a android.intent.action.MAIN -c android.intent.category.HOME >/dev/null",
+                    ),
+                )
                 when {
                     result == null -> "system access is not available"
                     !result.ok || !result.output.contains("Success") -> result.output.ifBlank { "install failed" }

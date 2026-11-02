@@ -36,6 +36,9 @@ object BootOptimizer {
             "echo deadline > /sys/block/mmcblk0/queue/scheduler",
             "for p in /sys/devices/system/cpu/cpu[0-3]/cpufreq; do " +
                 "echo ${mode.governor} > \$p/scaling_governor; echo ${mode.minFreqKhz} > \$p/scaling_min_freq; done",
+            // adbd once stopped listening on 5555 and every root action failed until a restart;
+            // with the persistent property it always comes back on the port.
+            "[ \"\$(getprop persist.adb.tcp.port)\" = 5555 ] || setprop persist.adb.tcp.port 5555",
         )
     }
 
