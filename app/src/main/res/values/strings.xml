@@ -106,7 +106,8 @@
     <string name="settings_start_launch">Open an app</string>
     <string name="settings_start_launch_none">None</string>
     <string name="settings_start_pick_title">App to open when the car starts</string>
-    <string name="settings_section_diagnostics">Diagnostics: car media</string>
+    <string name="settings_section_diagnostics">Diagnostics</string>
+    <string name="settings_diagnostics_resume">Music resume at last start:</string>
     <string name="settings_diagnostics_empty">Nothing received yet. Play the radio or Bluetooth music, then open this page again.</string>
     <string name="settings_section_volume">Volume</string>
     <string name="settings_volume_popup">Obsidian volume popup</string>

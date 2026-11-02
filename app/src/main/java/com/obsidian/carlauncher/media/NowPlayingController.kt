@@ -253,7 +253,8 @@ class NowPlayingController(private val activity: Activity, root: View) {
         }
         val current = controller
         when {
-            current == null -> AppLauncher.startPackage(activity, SPOTIFY)
+            // No session yet (e.g. right after start-up): resume the last player, open Spotify only if that fails.
+            current == null -> AutoStart.playOrOpen(activity) { AppLauncher.startPackage(activity, SPOTIFY) }
             current.isPlaying -> current.transportControls.pause()
             else -> current.transportControls.play()
         }

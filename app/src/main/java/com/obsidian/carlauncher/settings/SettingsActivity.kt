@@ -82,8 +82,11 @@ class SettingsActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        findViewById<TextView>(R.id.diagnostics_nwd_media).text =
-            NwdMedia.diagnostics(this).ifEmpty { getString(R.string.settings_diagnostics_empty) }
+        val resumeLog = AutoStart.resumeLog(this)
+        findViewById<TextView>(R.id.diagnostics_nwd_media).text = buildString {
+            append(NwdMedia.diagnostics(this@SettingsActivity).ifEmpty { getString(R.string.settings_diagnostics_empty) })
+            if (resumeLog.isNotEmpty()) append("\n\n").append(getString(R.string.settings_diagnostics_resume)).append('\n').append(resumeLog)
+        }
         renderBar()
         renderMemory()
         // A cheap no-op command tells us whether system access is approved.
