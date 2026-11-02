@@ -55,7 +55,14 @@ object BarControl {
     fun setNwdBarHidden(context: Context, hidden: Boolean, onDone: (Boolean) -> Unit) {
         val appContext = context.applicationContext
         if (hidden) {
-            RootShell.runAsync(appContext, listOf("pm disable-user --user 0 $NWD_BAR_PACKAGE")) { result ->
+            val commands = listOf(
+                "pm disable-user --user 0 $NWD_BAR_PACKAGE",
+                // Disabling does not stop a persistent app's running process, so its window would
+                // keep the strip. Once disabled, the system cannot restart it.
+                "for pid in \$(pidof $NWD_BAR_PACKAGE); do kill \$pid; done",
+                "true",
+            )
+            RootShell.runAsync(appContext, commands) { result ->
                 if (result?.ok != true) return@runAsync onDone(false)
                 // Give the window manager a moment to drop the stock bar's window.
                 mainHandler.postDelayed({
@@ -99,7 +106,7 @@ object BarControl {
         BarState.lastMode(context) == BarState.MODE_OVERLAY && BarState.lastErrors(context).contains(STRIP_TAKEN)
 
     private val mainHandler = Handler(Looper.getMainLooper())
-    private const val SWAP_SETTLE_MS = 700L
+    private const val SWAP_SETTLE_MS = 1_200L
     private const val STOCK_BAR_START_MS = 3_000L
     private const val STRIP_TAKEN = "already exists"
 }
