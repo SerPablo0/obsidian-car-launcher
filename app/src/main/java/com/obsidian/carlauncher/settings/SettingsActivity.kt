@@ -2,7 +2,10 @@ package com.obsidian.carlauncher.settings
 
 import android.app.Activity
 import android.app.ActivityManager
+import android.app.AlertDialog
 import android.os.Bundle
+import android.text.InputType
+import android.widget.EditText
 import android.os.Handler
 import android.os.Looper
 import android.view.LayoutInflater
@@ -13,6 +16,13 @@ import android.widget.RadioGroup
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import android.view.ContextThemeWrapper
+import android.widget.RadioButton
+import com.obsidian.carlauncher.Accent
+import com.obsidian.carlauncher.bar.BarService
+import com.obsidian.carlauncher.drive.SpeedometerSection
+import com.obsidian.carlauncher.drive.TripComputer
+import com.obsidian.carlauncher.maintenance.MaintenanceSection
 import com.obsidian.carlauncher.IdleClock
 import com.obsidian.carlauncher.R
 import com.obsidian.carlauncher.bar.BarControl
@@ -29,6 +39,7 @@ import com.obsidian.carlauncher.system.BootOptimizer
 import com.obsidian.carlauncher.system.RootShell
 import com.obsidian.carlauncher.system.UnusedApps
 import com.obsidian.carlauncher.system.Updater
+import com.obsidian.carlauncher.welcome.Welcome
 
 /** Speed tweaks and the list of NWD apps this car does not need. */
 class SettingsActivity : Activity() {
@@ -38,10 +49,12 @@ class SettingsActivity : Activity() {
     private lateinit var barEnable: Switch
     private lateinit var barHideNwd: Switch
     private lateinit var barStatus: TextView
+    private lateinit var speedometer: SpeedometerSection
     private val handler = Handler(Looper.getMainLooper())
     private val appLoader = Executors.newSingleThreadExecutor()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(Accent.current(this).theme)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
@@ -83,6 +96,10 @@ class SettingsActivity : Activity() {
             setOnCheckedChangeListener { _, checked -> IdleClock.setEnabled(this@SettingsActivity, checked) }
         }
         bindBootLogo(findViewById(R.id.boot_logo))
+        bindAccent(findViewById(R.id.accent_group))
+        bindWelcome()
+        speedometer = SpeedometerSection(this, window.decorView)
+        MaintenanceSection(this, window.decorView)
 
         bindUnusedApps(findViewById(R.id.unused_list))
     }
@@ -96,8 +113,15 @@ class SettingsActivity : Activity() {
         }
         renderBar()
         renderMemory()
+        speedometer.render()
         // A cheap no-op command tells us whether system access is approved.
         RootShell.runAsync(this, listOf("true")) { renderStatus(it) }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        if (requestCode != TripComputer.REQUEST_LOCATION) return
+        TripComputer.refresh()
+        speedometer.render()
     }
 
     private fun bindUnusedApps(list: LinearLayout) {
@@ -160,6 +184,28 @@ class SettingsActivity : Activity() {
         }
     }
 
+    private fun bindAccent(group: RadioGroup) {
+        val current = Accent.current(this)
+        for (accent in Accent.values()) {
+            val button = RadioButton(this, null, 0, R.style.SettingsRadio).apply {
+                id = View.generateViewId()
+                setText(accent.label)
+                // Each option is shown in its own colour.
+                setTextColor(Accent.color(ContextThemeWrapper(this@SettingsActivity, accent.theme)))
+            }
+            group.addView(button, RadioGroup.LayoutParams(RadioGroup.LayoutParams.MATCH_PARENT, RadioGroup.LayoutParams.WRAP_CONTENT))
+            if (accent == current) group.check(button.id)
+            button.setOnCheckedChangeListener { _, checked ->
+                if (!checked || accent == Accent.current(this)) return@setOnCheckedChangeListener
+                Accent.set(this, accent)
+                // The bar and this page are themed once when created; rebuild both. The home
+                // screen notices the change itself when it comes back to the front.
+                BarService.instance?.reattach()
+                recreate()
+            }
+        }
+    }
+
     private fun bindBootLogo(toggle: Switch) {
         toggle.isChecked = BootLogo.isApplied(this)
         toggle.setOnCheckedChangeListener { _, checked ->
@@ -172,6 +218,40 @@ class SettingsActivity : Activity() {
                 }
             }
         }
+    }
+
+    private fun bindWelcome() {
+        findViewById<Switch>(R.id.welcome_enabled).apply {
+            isChecked = Welcome.isEnabled(this@SettingsActivity)
+            setOnCheckedChangeListener { _, checked -> Welcome.setEnabled(this@SettingsActivity, checked) }
+        }
+        val value = findViewById<TextView>(R.id.welcome_name_value)
+        fun renderName() {
+            value.text = Welcome.name(this).ifBlank { getString(R.string.settings_welcome_name_none) }
+        }
+        renderName()
+        findViewById<View>(R.id.welcome_name_row).setOnClickListener {
+            val input = EditText(this).apply {
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+                textSize = 22f
+                setText(Welcome.name(this@SettingsActivity))
+            }
+            val pad = (24 * resources.displayMetrics.density).toInt()
+            val padded = LinearLayout(this).apply {
+                setPadding(pad, pad / 2, pad, 0)
+                addView(input, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+            }
+            AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+                .setTitle(R.string.settings_welcome_name_title)
+                .setView(padded)
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    Welcome.setName(this, input.text.toString().trim())
+                    renderName()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+        findViewById<View>(R.id.welcome_preview).setOnClickListener { Welcome.show(this) }
     }
 
     private fun bindAutoStart() {

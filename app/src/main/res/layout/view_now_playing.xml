@@ -50,7 +50,7 @@
                 android:layout_height="18dp"
                 android:importantForAccessibility="no"
                 android:src="@drawable/ic_music"
-                android:tint="@color/accent" />
+                android:tint="?attr/obsAccent" />
 
             <TextView
                 android:id="@+id/source"

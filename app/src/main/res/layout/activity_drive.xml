@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Driving mode: one large reading (speed), the clock, and a few big targets that are
+    easy to hit without looking for long. Nothing animates except the speed digits.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical"
+    android:paddingStart="40dp"
+    android:paddingTop="32dp"
+    android:paddingEnd="40dp"
+    android:paddingBottom="28dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextClock
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="sans-serif-light"
+            android:format12Hour="h:mm"
+            android:format24Hour="HH:mm"
+            android:textColor="@color/text_primary"
+            android:textSize="40sp" />
+
+        <ImageButton
+            android:id="@+id/drive_exit"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:background="@drawable/bg_tile"
+            android:contentDescription="@string/drive_exit"
+            android:padding="22dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_close"
+            android:tint="@color/text_primary" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/drive_speed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-thin"
+            android:includeFontPadding="false"
+            android:letterSpacing="-0.04"
+            android:text="@string/drive_speed_none"
+            android:textColor="@color/text_primary"
+            android:textSize="220sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/drive_unit"
+            android:textColor="?attr/obsAccent"
+            android:textSize="30sp" />
+
+        <TextView
+            android:id="@+id/drive_gps_state"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:textColor="@color/text_secondary"
+            android:textSize="20sp" />
+
+        <!-- This trip so far. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="horizontal">
+
+            <include
+                android:id="@+id/drive_distance"
+                layout="@layout/item_trip_stat" />
+
+            <include
+                android:id="@+id/drive_duration"
+                layout="@layout/item_trip_stat" />
+
+            <include
+                android:id="@+id/drive_average"
+                layout="@layout/item_trip_stat" />
+
+            <include
+                android:id="@+id/drive_top_speed"
+                layout="@layout/item_trip_stat" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/drive_track"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:singleLine="true"
+        android:textColor="@color/text_label"
+        android:textSize="22sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/drive_previous"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:background="@drawable/bg_tile"
+            android:contentDescription="@string/cd_previous"
+            android:padding="28dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_previous"
+            android:tint="@color/text_primary" />
+
+        <ImageButton
+            android:id="@+id/drive_play"
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="32dp"
+            android:background="@drawable/bg_play"
+            android:contentDescription="@string/cd_play"
+            android:padding="38dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_play"
+            android:tint="@color/bg" />
+
+        <ImageButton
+            android:id="@+id/drive_next"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:background="@drawable/bg_tile"
+            android:contentDescription="@string/cd_next"
+            android:padding="28dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_next"
+            android:tint="@color/text_primary" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="28dp"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/drive_maps"
+            android:layout_width="0dp"
+            android:layout_height="96dp"
+            android:layout_marginEnd="12dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_tile"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_maps"
+                android:tint="@color/text_primary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:text="@string/shortcut_maps"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/drive_phone"
+            android:layout_width="0dp"
+            android:layout_height="96dp"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_tile"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_phone"
+                android:tint="@color/text_primary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:text="@string/shortcut_phone"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

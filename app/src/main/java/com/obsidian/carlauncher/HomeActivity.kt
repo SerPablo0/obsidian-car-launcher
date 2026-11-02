@@ -7,8 +7,13 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.View
 import android.widget.PopupMenu
+import android.widget.TextView
+import com.obsidian.carlauncher.maintenance.Maintenance
 import com.obsidian.carlauncher.apps.AppDrawer
 import com.obsidian.carlauncher.bar.BarControl
+import com.obsidian.carlauncher.drive.DriveActivity
+import com.obsidian.carlauncher.drive.SpeedCard
+import com.obsidian.carlauncher.drive.TripComputer
 import com.obsidian.carlauncher.media.NowPlayingController
 import com.obsidian.carlauncher.settings.SettingsActivity
 import com.obsidian.carlauncher.system.AutoStart
@@ -19,8 +24,14 @@ class HomeActivity : Activity() {
     private lateinit var nowPlaying: NowPlayingController
     private lateinit var drawer: AppDrawer
     private lateinit var idleClock: IdleClock
+    private lateinit var speedCard: SpeedCard
+    private lateinit var appliedAccent: Accent
+    /** Between onResume and onPause; driving mode only opens by itself over the home screen. */
+    private var inFront = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        appliedAccent = Accent.current(this)
+        setTheme(appliedAccent.theme)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
 
@@ -34,8 +45,13 @@ class HomeActivity : Activity() {
 
         BootOptimizer.runIfNeeded(this)
         AutoStart.runIfNeeded(this)
+        TripComputer.start(this)
+        speedCard = SpeedCard(this, findViewById(R.id.speed_block), onDriving = ::autoOpenDriveMode)
+        TripComputer.requestPermissionOnce(this)
 
-        findViewById<View>(R.id.clock_block).setOnLongClickListener { anchor ->
+        val clockBlock = findViewById<View>(R.id.clock_block)
+        clockBlock.setOnClickListener { openDriveMode() }
+        clockBlock.setOnLongClickListener { anchor ->
             showSystemMenu(anchor)
             true
         }
@@ -44,6 +60,7 @@ class HomeActivity : Activity() {
     override fun onStart() {
         super.onStart()
         nowPlaying.start()
+        speedCard.start()
         // Gives the bar service time to bind after boot before judging that it is missing.
         root.postDelayed(barGuard, BAR_GUARD_DELAY_MS)
     }
@@ -51,15 +68,55 @@ class HomeActivity : Activity() {
     override fun onStop() {
         root.removeCallbacks(barGuard)
         nowPlaying.stop()
+        speedCard.stop()
         super.onStop()
     }
 
     override fun onResume() {
         super.onResume()
+        // A new accent chosen in settings: the theme is applied in onCreate, so rebuild.
+        if (Accent.current(this) != appliedAccent) {
+            recreate()
+            return
+        }
+        inFront = true
         idleClock.resume()
+        renderMaintenanceBanner()
+        // Location access may have been changed in Android's settings meanwhile.
+        TripComputer.refresh()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        if (requestCode == TripComputer.REQUEST_LOCATION) TripComputer.refresh()
+    }
+
+    private fun openDriveMode() {
+        AppLauncher.start(this, Intent(this, DriveActivity::class.java))
+    }
+
+    private fun autoOpenDriveMode() {
+        if (!inFront) return
+        inFront = false
+        TripComputer.onDriveModeShown()
+        openDriveMode()
+    }
+
+    private fun renderMaintenanceBanner() {
+        val banner = findViewById<TextView>(R.id.maintenance_banner)
+        val urgent = Maintenance.mostUrgent(this)
+        if (urgent == null) {
+            banner.visibility = View.GONE
+            return
+        }
+        banner.text = Maintenance.reminderText(this, urgent)
+        banner.visibility = View.VISIBLE
+        banner.setOnClickListener {
+            AppLauncher.start(this, Intent(this, SettingsActivity::class.java))
+        }
     }
 
     override fun onPause() {
+        inFront = false
         idleClock.pause()
         super.onPause()
     }
@@ -96,6 +153,10 @@ class HomeActivity : Activity() {
 
     private fun showSystemMenu(anchor: View) {
         PopupMenu(this, anchor).apply {
+            menu.add(R.string.menu_drive_mode).setOnMenuItemClickListener {
+                openDriveMode()
+                true
+            }
             menu.add(R.string.menu_obsidian_settings).setOnMenuItemClickListener {
                 AppLauncher.start(this@HomeActivity, Intent(this@HomeActivity, SettingsActivity::class.java))
             }

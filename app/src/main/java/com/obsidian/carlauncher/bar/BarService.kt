@@ -12,7 +12,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
+import com.obsidian.carlauncher.Accent
 import com.obsidian.carlauncher.R
+import com.obsidian.carlauncher.drive.TripComputer
 import com.obsidian.carlauncher.media.NwdMedia
 import com.obsidian.carlauncher.system.AutoStart
 
@@ -36,6 +38,8 @@ class BarService : AccessibilityService() {
         volumePopup = VolumePopup(this).also { it.start() }
         // Starts listening to the car's own media players from boot, before the home screen appears.
         NwdMedia.ensureRegistered(this)
+        // Likewise the trip computer, so a drive is measured from the start whatever app is open.
+        TripComputer.start(this)
         // This service lives as long as the system runs, so it is where car on/off is noticed.
         registerReceiver(screenReceiver, IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
@@ -77,7 +81,7 @@ class BarService : AccessibilityService() {
     private fun attachBar() {
         if (barView != null) return
         val windowManager = getSystemService(WindowManager::class.java)
-        val inflater = LayoutInflater.from(ContextThemeWrapper(this, R.style.Theme_Obsidian))
+        val inflater = LayoutInflater.from(ContextThemeWrapper(this, Accent.current(this).theme))
         val errors = mutableListOf<String>()
 
         // Reserved type first; plain accessibility overlay if this firmware refuses it.

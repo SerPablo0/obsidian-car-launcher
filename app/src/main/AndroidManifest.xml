@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <!-- Granted through appops by the settings page; lets the bar use NWD's reserved window type. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Driving mode reads the head unit's GPS to show the current speed. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
         android:allowBackup="false"
@@ -40,6 +42,22 @@
 
         <activity
             android:name=".settings.SettingsActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:screenOrientation="nosensor"
+            android:taskAffinity="" />
+
+        <!-- Started at each car start, over whatever app is open; finishing returns to it. -->
+        <activity
+            android:name=".welcome.WelcomeActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:screenOrientation="nosensor"
+            android:taskAffinity="" />
+
+        <activity
+            android:name=".drive.DriveActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:screenOrientation="nosensor"

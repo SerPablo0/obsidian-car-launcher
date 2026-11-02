@@ -11,6 +11,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.KeyEvent
 import com.obsidian.carlauncher.media.MediaListenerService
+import com.obsidian.carlauncher.welcome.Welcome
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -117,6 +118,7 @@ object AutoStart {
         carStartAt = SystemClock.elapsedRealtime()
         prefs(context).edit().putString(KEY_RESUME_LOG, "").apply()
         log(context, "car start detected: $reason")
+        Welcome.onCarStart(context)
         launchApp(context)?.let { component ->
             handler.postDelayed({ launch(context, component) }, LAUNCH_DELAY_MS)
         }

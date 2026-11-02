@@ -16,7 +16,7 @@
         android:layout_height="32dp"
         android:importantForAccessibility="no"
         android:src="@drawable/ic_volume"
-        android:tint="@color/accent" />
+        android:tint="?attr/obsAccent" />
 
     <com.obsidian.carlauncher.widget.LineProgressView
         android:id="@+id/volume_progress"

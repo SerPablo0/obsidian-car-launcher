@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The ring that spreads out from the mark on the welcome screen. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <stroke
+        android:width="2dp"
+        android:color="?attr/obsAccent" />
+</shape>

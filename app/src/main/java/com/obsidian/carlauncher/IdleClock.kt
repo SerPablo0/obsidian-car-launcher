@@ -5,6 +5,8 @@ import android.os.Handler
 import android.os.Looper
 import android.view.View
 import android.widget.TextView
+import com.obsidian.carlauncher.drive.TripComputer
+import com.obsidian.carlauncher.drive.setTextIfChanged
 
 /**
  * After a while on the home screen without a touch, covers it with a large, static clock.
@@ -19,6 +21,9 @@ class IdleClock(
     private val handler = Handler(Looper.getMainLooper())
     private val showRunnable = Runnable { show() }
     private var active = false
+    private val speedRow: View = overlay.findViewById(R.id.idle_speed_row)
+    private val speed: TextView = overlay.findViewById(R.id.idle_speed)
+    private val speedListener: () -> Unit = { renderSpeed() }
 
     init {
         overlay.setOnClickListener {
@@ -37,6 +42,7 @@ class IdleClock(
     fun pause() {
         active = false
         handler.removeCallbacks(showRunnable)
+        TripComputer.removeListener(speedListener)
         overlay.visibility = View.GONE
     }
 
@@ -54,6 +60,8 @@ class IdleClock(
         val track = nowPlaying()
         overlay.findViewById<View>(R.id.idle_now_playing).visibility = if (track == null) View.GONE else View.VISIBLE
         overlay.findViewById<TextView>(R.id.idle_track).text = track
+        TripComputer.addListener(speedListener)
+        renderSpeed()
         overlay.alpha = 0f
         overlay.visibility = View.VISIBLE
         overlay.animate().alpha(1f).setDuration(FADE_MS).withLayer().start()
@@ -61,7 +69,16 @@ class IdleClock(
 
     private fun hide() {
         overlay.animate().cancel()
+        TripComputer.removeListener(speedListener)
         overlay.visibility = View.GONE
+    }
+
+    private fun renderSpeed() {
+        val kmh = TripComputer.speedKmh
+        speedRow.visibility = if (kmh == null) View.GONE else View.VISIBLE
+        if (kmh == null) return
+        speed.setTextIfChanged(kmh.toString())
+        speed.setTextColor(overlay.context.getColor(if (TripComputer.isOverLimit) R.color.warning else R.color.text_primary))
     }
 
     companion object {

@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
+import com.obsidian.carlauncher.Accent
 import com.obsidian.carlauncher.R
 
 /** A thin rounded track with a filled portion. Cheaper than a styled ProgressBar. */
@@ -18,7 +19,7 @@ class LineProgressView @JvmOverloads constructor(
         strokeCap = Paint.Cap.ROUND
     }
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = context.getColor(R.color.accent)
+        color = Accent.color(context)
         strokeCap = Paint.Cap.ROUND
     }
 

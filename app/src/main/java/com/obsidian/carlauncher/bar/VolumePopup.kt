@@ -13,6 +13,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.TextView
+import com.obsidian.carlauncher.Accent
 import com.obsidian.carlauncher.R
 import com.obsidian.carlauncher.system.RootShell
 import com.obsidian.carlauncher.widget.LineProgressView
@@ -74,7 +75,7 @@ class VolumePopup(private val context: Context) {
     }
 
     private fun addView(): View? {
-        val popup = LayoutInflater.from(ContextThemeWrapper(context, R.style.Theme_Obsidian))
+        val popup = LayoutInflater.from(ContextThemeWrapper(context, Accent.current(context).theme))
             .inflate(R.layout.view_volume, null)
         popup.alpha = 0f
         val params = WindowManager.LayoutParams(

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The user's accent colour; each Theme.Obsidian.* variant sets it. -->
+    <attr name="obsAccent" format="color" />
+</resources>

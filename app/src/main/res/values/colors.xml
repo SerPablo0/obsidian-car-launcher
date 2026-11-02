@@ -9,6 +9,12 @@
     <color name="text_label">#C9CDD3</color>
     <color name="track">#2A2E35</color>
     <color name="accent">#2EE6A6</color>
+    <color name="accent_blue">#4C8DFF</color>
+    <color name="accent_amber">#FFB547</color>
+    <color name="accent_violet">#B48CFF</color>
+    <color name="accent_white">#F2F3F5</color>
+    <!-- Speed over the user's limit. -->
+    <color name="warning">#FF5A5F</color>
     <color name="ripple">#26FFFFFF</color>
     <color name="bar_bg">#070809</color>
     <color name="bar_border">#1C1F24</color>

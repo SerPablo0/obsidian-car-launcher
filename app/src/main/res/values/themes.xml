@@ -9,10 +9,32 @@
         <item name="android:windowShowWallpaper">false</item>
         <item name="android:statusBarColor">@color/bg</item>
         <item name="android:navigationBarColor">#000000</item>
+        <item name="obsAccent">@color/accent</item>
         <item name="android:colorAccent">@color/accent</item>
         <item name="android:colorControlHighlight">@color/ripple</item>
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
+    </style>
+
+    <!-- Accent choices (settings > Look). Mint is the base theme above. -->
+    <style name="Theme.Obsidian.Blue">
+        <item name="obsAccent">@color/accent_blue</item>
+        <item name="android:colorAccent">@color/accent_blue</item>
+    </style>
+
+    <style name="Theme.Obsidian.Amber">
+        <item name="obsAccent">@color/accent_amber</item>
+        <item name="android:colorAccent">@color/accent_amber</item>
+    </style>
+
+    <style name="Theme.Obsidian.Violet">
+        <item name="obsAccent">@color/accent_violet</item>
+        <item name="android:colorAccent">@color/accent_violet</item>
+    </style>
+
+    <style name="Theme.Obsidian.White">
+        <item name="obsAccent">@color/accent_white</item>
+        <item name="android:colorAccent">@color/accent_white</item>
     </style>
 
     <style name="SettingsRadio">
@@ -32,7 +54,7 @@
         <item name="android:fontFamily">sans-serif-medium</item>
         <item name="android:letterSpacing">0.08</item>
         <item name="android:textAllCaps">true</item>
-        <item name="android:textColor">@color/accent</item>
+        <item name="android:textColor">?attr/obsAccent</item>
         <item name="android:textSize">14sp</item>
     </style>
 </resources>
