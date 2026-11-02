@@ -21,6 +21,45 @@
     <string name="menu_home_app">Home app</string>
     <string name="menu_android_settings">Android settings</string>
     <string name="menu_car_settings">Car settings</string>
+    <string name="menu_obsidian_settings">Obsidian settings</string>
+
+    <string name="settings_title">Obsidian settings</string>
+    <string name="settings_status_connecting">System access: checking…</string>
+    <string name="settings_status_ready">System access: ready</string>
+    <string name="settings_status_unavailable">System access: not approved yet. Tap Apply now and choose "Always allow" in the dialog that appears.</string>
+    <string name="settings_memory">Free memory: %1$d MB of %2$d MB</string>
+    <string name="settings_section_speed">Speed</string>
+    <string name="settings_speed_tweaks">Speed tweaks at every start</string>
+    <string name="settings_speed_tweaks_desc">Stops the kernel memory scanner (ksmd), which uses about a quarter of the CPU, and switches storage to the deadline scheduler. Android resets both on every boot, so they are applied again each time the car starts.</string>
+    <string name="settings_apply_now">Apply now</string>
+    <string name="settings_section_unused">Unused car features</string>
+    <string name="settings_unused_desc">Turning a feature off disables the app without removing it. Turn it back on here at any time.</string>
+    <string name="settings_change_failed">Could not change it. Check system access above.</string>
+    <string name="settings_applied">Speed tweaks applied</string>
+    <string name="settings_apply_failed">Some tweaks failed: %1$s</string>
+
+    <string name="unused_ads">Ad service</string>
+    <string name="unused_ads_desc">Manufacturer promotions running in the background</string>
+    <string name="unused_store">Car app store</string>
+    <string name="unused_store_desc">NWD\'s own app store service</string>
+    <string name="unused_model_shop">Car model shop</string>
+    <string name="unused_model_shop_desc">Downloads 3D car models for the stock launcher</string>
+    <string name="unused_guide">User guide</string>
+    <string name="unused_guide_desc">Built-in manual pages</string>
+    <string name="unused_version_check">App version checker</string>
+    <string name="unused_version_check_desc">Checks versions of NWD apps</string>
+    <string name="unused_factory_test">Factory test tool</string>
+    <string name="unused_factory_test_desc">Hardware test used on the production line</string>
+    <string name="unused_voice">NWD voice commands</string>
+    <string name="unused_voice_desc">Always-on voice command listener</string>
+    <string name="unused_cvbs">Rear-seat video output</string>
+    <string name="unused_cvbs_desc">Sends video to headrest screens</string>
+    <string name="unused_camera">Reversing camera</string>
+    <string name="unused_camera_desc">Camera view when reverse gear is engaged</string>
+    <string name="unused_can">CAN bus service</string>
+    <string name="unused_can_help">CAN bus help</string>
+    <string name="unused_can_desc">Reads data from a CAN decoder box</string>
+    <string name="unused_risky_warning">Only turn off if CAN Type Set in factory settings is set to none.</string>
 
     <string name="cd_album_art">Album art</string>
     <string name="cd_previous">Previous track</string>

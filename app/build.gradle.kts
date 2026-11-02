@@ -12,8 +12,8 @@ android {
         // The head unit runs Android 10 (API 29) with a 32-bit userspace.
         minSdk = 29
         targetSdk = 29
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
     }
 
     buildTypes {
@@ -42,4 +42,6 @@ android {
 
 dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
+    // Pure-Kotlin ADB client, used to reach the head unit's root adbd over loopback.
+    implementation("dev.mobile:dadb:2.0.0")
 }

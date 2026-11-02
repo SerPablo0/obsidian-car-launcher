@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Loopback connection to the head unit's adbd for the speed tweaks. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
+
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
@@ -31,6 +35,13 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".settings.SettingsActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:screenOrientation="nosensor"
+            android:taskAffinity="" />
 
         <!-- Gives the home screen read access to media sessions (Spotify and others). -->
         <service

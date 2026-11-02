@@ -9,6 +9,8 @@ import android.view.View
 import android.widget.PopupMenu
 import com.obsidian.carlauncher.apps.AppDrawer
 import com.obsidian.carlauncher.media.NowPlayingController
+import com.obsidian.carlauncher.settings.SettingsActivity
+import com.obsidian.carlauncher.system.BootOptimizer
 
 class HomeActivity : Activity() {
 
@@ -22,6 +24,8 @@ class HomeActivity : Activity() {
         drawer = AppDrawer(this, findViewById(R.id.drawer))
         nowPlaying = NowPlayingController(this, findViewById(R.id.now_playing))
         Shortcuts.bind(this, findViewById(R.id.shortcuts), onAllApps = drawer::open)
+
+        BootOptimizer.runIfNeeded(this)
 
         findViewById<View>(R.id.clock_block).setOnLongClickListener { anchor ->
             showSystemMenu(anchor)
@@ -57,6 +61,9 @@ class HomeActivity : Activity() {
 
     private fun showSystemMenu(anchor: View) {
         PopupMenu(this, anchor).apply {
+            menu.add(R.string.menu_obsidian_settings).setOnMenuItemClickListener {
+                AppLauncher.start(this@HomeActivity, Intent(this@HomeActivity, SettingsActivity::class.java))
+            }
             menu.add(R.string.menu_home_app).setOnMenuItemClickListener {
                 AppLauncher.start(this@HomeActivity, Intent(Settings.ACTION_HOME_SETTINGS))
             }
