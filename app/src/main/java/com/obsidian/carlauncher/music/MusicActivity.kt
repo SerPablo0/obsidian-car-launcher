@@ -5,6 +5,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -23,6 +24,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.obsidian.carlauncher.Accent
 import com.obsidian.carlauncher.AppLauncher
 import com.obsidian.carlauncher.R
+import com.obsidian.carlauncher.drive.setTextIfChanged
+import com.obsidian.carlauncher.widget.LineProgressView
 import org.schabi.newpipe.extractor.exceptions.ReCaptchaException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
@@ -49,11 +52,23 @@ class MusicActivity : Activity() {
     private lateinit var playerTitle: TextView
     private lateinit var playerArtist: TextView
     private lateinit var playerPlay: ImageButton
+    private lateinit var playerShuffle: ImageButton
+    private lateinit var playerRepeat: ImageButton
+    private lateinit var playerPosition: TextView
+    private lateinit var playerDuration: TextView
+    private lateinit var playerProgress: LineProgressView
+    private lateinit var shuffleAll: View
 
     private val adapter = SongAdapter(onTap = ::onTap, onLongPress = ::onLongPress)
     private val searcher = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
     private val refresh: () -> Unit = { render() }
+    private val progressTicker = object : Runnable {
+        override fun run() {
+            renderProgress()
+            main.postDelayed(this, PROGRESS_INTERVAL_MS)
+        }
+    }
 
     private var showingSaved = false
     private var results: List<Music.Song> = emptyList()
@@ -80,6 +95,13 @@ class MusicActivity : Activity() {
         playerTitle = findViewById(R.id.music_player_title)
         playerArtist = findViewById(R.id.music_player_artist)
         playerPlay = findViewById(R.id.music_player_play)
+        playerShuffle = findViewById(R.id.music_player_shuffle)
+        playerRepeat = findViewById(R.id.music_player_repeat)
+        playerPosition = findViewById(R.id.music_player_position)
+        playerDuration = findViewById(R.id.music_player_duration)
+        playerProgress = findViewById(R.id.music_player_progress)
+        shuffleAll = findViewById(R.id.music_shuffle_all)
+        MusicPlayer.loadSettings(this)
 
         findViewById<RecyclerView>(R.id.music_list).apply {
             layoutManager = LinearLayoutManager(this@MusicActivity)
@@ -102,6 +124,14 @@ class MusicActivity : Activity() {
         findViewById<View>(R.id.music_player_previous).setOnClickListener { MusicPlayer.previous() }
         playerPlay.setOnClickListener { MusicPlayer.toggle() }
         findViewById<View>(R.id.music_player_next).setOnClickListener { MusicPlayer.next() }
+        playerShuffle.setOnClickListener { MusicPlayer.toggleShuffle(this) }
+        playerRepeat.setOnClickListener { MusicPlayer.cycleRepeat(this) }
+        shuffleAll.setOnClickListener { MusicPlayer.playShuffled(this, saved) }
+        playerProgress.lineThickness = PROGRESS_LINE_DP * resources.displayMetrics.density
+        playerProgress.onSeek = { fraction ->
+            MusicPlayer.seekTo((MusicPlayer.durationMs * fraction).toInt())
+            renderProgress()
+        }
         statusAction.setOnClickListener { askStorage() }
 
         if (!Music.hasStorageAccess(this)) askStorage()
@@ -113,11 +143,13 @@ class MusicActivity : Activity() {
         MusicPlayer.addListener(refresh)
         reloadSaved()
         render()
+        main.post(progressTicker)
     }
 
     override fun onStop() {
         SongDownloads.removeListener(refresh)
         MusicPlayer.removeListener(refresh)
+        main.removeCallbacks(progressTicker)
         super.onStop()
     }
 
@@ -183,6 +215,7 @@ class MusicActivity : Activity() {
         tabSearch.setTextColor(tabColor(!showingSaved))
         tabSaved.setTextColor(tabColor(showingSaved))
         tabSaved.text = getString(R.string.music_tab_saved, saved.size)
+        shuffleAll.visibility = if (showingSaved && saved.size >= 2) View.VISIBLE else View.GONE
 
         adapter.rows = if (showingSaved) {
             saved.map { song ->
@@ -223,7 +256,29 @@ class MusicActivity : Activity() {
             val playing = MusicPlayer.isPlaying
             playerPlay.setImageResource(if (playing) R.drawable.ic_pause else R.drawable.ic_play)
             playerPlay.contentDescription = getString(if (playing) R.string.cd_pause else R.string.cd_play)
+            playerShuffle.imageTintList = ColorStateList.valueOf(tabColor(MusicPlayer.shuffle))
+            val repeat = MusicPlayer.repeat
+            playerRepeat.setImageResource(if (repeat == MusicPlayer.Repeat.ONE) R.drawable.ic_repeat_one else R.drawable.ic_repeat)
+            playerRepeat.imageTintList = ColorStateList.valueOf(tabColor(repeat != MusicPlayer.Repeat.OFF))
+            playerRepeat.contentDescription = getString(
+                when (repeat) {
+                    MusicPlayer.Repeat.OFF -> R.string.cd_repeat_off
+                    MusicPlayer.Repeat.ALL -> R.string.cd_repeat_all
+                    MusicPlayer.Repeat.ONE -> R.string.cd_repeat_one
+                },
+            )
+            renderProgress()
         }
+    }
+
+    private fun renderProgress() {
+        if (MusicPlayer.current == null) return
+        val total = MusicPlayer.durationMs
+        val elapsed = MusicPlayer.positionMs.coerceIn(0, maxOf(total, 0))
+        // A finger on the line decides where it is until it lets go.
+        if (!playerProgress.isDragging) playerProgress.fraction = if (total > 0) elapsed.toFloat() / total else 0f
+        playerPosition.setTextIfChanged(Music.formatDuration(elapsed / 1000L).ifEmpty { "0:00" })
+        playerDuration.setTextIfChanged(Music.formatDuration(total / 1000L))
     }
 
     private fun onTap(row: SongRow) {
@@ -265,5 +320,7 @@ class MusicActivity : Activity() {
 
     private companion object {
         const val REQUEST_STORAGE = 51
+        const val PROGRESS_INTERVAL_MS = 500L
+        const val PROGRESS_LINE_DP = 4
     }
 }

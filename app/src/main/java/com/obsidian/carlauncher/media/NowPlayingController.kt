@@ -77,6 +77,7 @@ class NowPlayingController(private val activity: Activity, root: View) {
     init {
         art.outlineProvider = RoundedOutline(activity.resources.getDimension(R.dimen.art_radius))
         art.clipToOutline = true
+        progress.lineThickness = PROGRESS_LINE_DP * activity.resources.displayMetrics.density
 
         root.findViewById<View>(R.id.btn_previous).setOnClickListener {
             if (nwdActive) sendMediaKey(KeyEvent.KEYCODE_MEDIA_PREVIOUS) else controller?.transportControls?.skipToPrevious()
@@ -175,6 +176,10 @@ class NowPlayingController(private val activity: Activity, root: View) {
         playButton.setImageResource(if (playing) R.drawable.ic_pause else R.drawable.ic_play)
         playButton.contentDescription = activity.getString(if (playing) R.string.cd_pause else R.string.cd_play)
 
+        // Players that accept a position (Spotify, Obsidian Music) get a draggable line.
+        val total = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
+        val canSeek = total > 0 && ((current.playbackState?.actions ?: 0L) and PlaybackState.ACTION_SEEK_TO) != 0L
+        progress.onSeek = if (canSeek) { fraction -> seekTo(current, (total * fraction).toLong()) } else null
         renderProgress()
         handler.removeCallbacks(progressTicker)
         if (playing) handler.postDelayed(progressTicker, PROGRESS_INTERVAL_MS)
@@ -185,6 +190,8 @@ class NowPlayingController(private val activity: Activity, root: View) {
         // When the ticks stop, nothing else tells us; look again just after they would time out.
         handler.removeCallbacks(nwdRecheck)
         handler.postDelayed(nwdRecheck, NwdMedia.TICK_TIMEOUT_MS + 500)
+        // NWD's players only report their position; they cannot be moved.
+        progress.onSeek = null
         source.setText(if (info.isRadio) R.string.now_playing_source_radio else R.string.now_playing_source_nwd)
         title.text = info.title
         artist.text = info.subtitle
@@ -221,12 +228,20 @@ class NowPlayingController(private val activity: Activity, root: View) {
         }
         if (total > 0) elapsed = elapsed.coerceIn(0L, total)
 
-        progress.fraction = if (total > 0) elapsed.toFloat() / total else 0f
+        // A finger on the line decides where it is until it lets go.
+        if (!progress.isDragging) progress.fraction = if (total > 0) elapsed.toFloat() / total else 0f
         position.text = formatTime(elapsed)
         duration.text = if (total > 0) formatTime(total) else ""
     }
 
+    private fun seekTo(target: MediaController, positionMs: Long) {
+        target.transportControls.seekTo(positionMs)
+        // Most players report the new position at once; this covers those that do not.
+        handler.postDelayed({ renderProgress() }, SEEK_REFRESH_MS)
+    }
+
     private fun renderIdle() {
+        progress.onSeek = null
         source.setText(R.string.now_playing_idle_source)
         title.setText(R.string.now_playing_idle_title)
         artist.setText(R.string.now_playing_idle_subtitle)
@@ -314,6 +329,8 @@ class NowPlayingController(private val activity: Activity, root: View) {
         const val NWD_RADIO = "com.nwd.radio"
         const val NWD_MUSIC = "com.nwd.android.music.ui"
         const val PROGRESS_INTERVAL_MS = 1000L
+        const val PROGRESS_LINE_DP = 4
+        const val SEEK_REFRESH_MS = 300L
 
         fun formatTime(ms: Long): String {
             val totalSeconds = ms / 1000

@@ -4,6 +4,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
@@ -21,9 +23,15 @@ import java.io.IOException
  */
 object MusicPlayer {
 
+    enum class Repeat { OFF, ALL, ONE }
+
     private const val RESTART_THRESHOLD_MS = 3_000
     /** The longest screen-off still taken for the blackout while the engine is cranked. */
     private const val BLACKOUT_MAX_MS = 20_000L
+    private const val PREFS = "music_player"
+    private const val KEY_SHUFFLE = "shuffle"
+    private const val KEY_REPEAT = "repeat"
+    private const val COVER_MAX_PX = 512
 
     private var appContext: Context? = null
     private var screenWatched = false
@@ -34,11 +42,22 @@ object MusicPlayer {
     private var focusRequest: AudioFocusRequest? = null
     private var resumeOnFocusGain = false
     private var queue: List<Music.LocalSong> = emptyList()
-    private var index = -1
+    /** The order songs play in, as indices into [queue]; shuffled while [shuffle] is on. */
+    private var order: List<Int> = emptyList()
+    /** Where playback is in [order]. */
+    private var position = -1
+    private var settingsLoaded = false
     private val listeners = mutableListOf<() -> Unit>()
 
-    val current: Music.LocalSong? get() = queue.getOrNull(index)
+    var shuffle = false
+        private set
+    var repeat = Repeat.OFF
+        private set
+
+    val current: Music.LocalSong? get() = order.getOrNull(position)?.let(queue::getOrNull)
     val isPlaying: Boolean get() = player?.isPlaying == true
+    val positionMs: Int get() = player?.currentPosition ?: 0
+    val durationMs: Int get() = player?.duration ?: 0
 
     fun addListener(listener: () -> Unit) {
         listeners += listener
@@ -48,12 +67,63 @@ object MusicPlayer {
         listeners -= listener
     }
 
+    /** Reads the saved shuffle and repeat choices; cheap after the first call. */
+    fun loadSettings(context: Context) {
+        if (settingsLoaded) return
+        settingsLoaded = true
+        val prefs = prefs(context)
+        shuffle = prefs.getBoolean(KEY_SHUFFLE, false)
+        repeat = Repeat.values().getOrNull(prefs.getInt(KEY_REPEAT, 0)) ?: Repeat.OFF
+    }
+
     /** Main thread. */
     fun play(context: Context, songs: List<Music.LocalSong>, start: Int) {
         appContext = context.applicationContext
+        loadSettings(context)
         watchScreen(context.applicationContext)
         queue = songs
-        load(start, autoplay = true)
+        arrange(start)
+        load(position, autoplay = true)
+    }
+
+    /** Every song in random order, starting anywhere. */
+    fun playShuffled(context: Context, songs: List<Music.LocalSong>) {
+        if (songs.isEmpty()) return
+        loadSettings(context)
+        if (!shuffle) toggleShuffle(context)
+        play(context, songs, songs.indices.random())
+    }
+
+    fun toggleShuffle(context: Context) {
+        loadSettings(context)
+        shuffle = !shuffle
+        prefs(context).edit().putBoolean(KEY_SHUFFLE, shuffle).apply()
+        // The song playing now stays; the rest are put in the new order around it.
+        order.getOrNull(position)?.let(::arrange)
+        notifyListeners()
+    }
+
+    fun cycleRepeat(context: Context) {
+        loadSettings(context)
+        repeat = Repeat.values()[(repeat.ordinal + 1) % Repeat.values().size]
+        prefs(context).edit().putInt(KEY_REPEAT, repeat.ordinal).apply()
+        notifyListeners()
+    }
+
+    fun seekTo(positionMs: Int) {
+        player?.seekTo(positionMs)
+        publishState()
+    }
+
+    /** Sets [order] and [position] so that the song at [startIndex] of [queue] plays now. */
+    private fun arrange(startIndex: Int) {
+        if (shuffle) {
+            order = listOf(startIndex) + queue.indices.filter { it != startIndex }.shuffled()
+            position = 0
+        } else {
+            order = queue.indices.toList()
+            position = startIndex
+        }
     }
 
     /**
@@ -87,17 +157,22 @@ object MusicPlayer {
 
     fun toggle() = if (isPlaying) pause() else resume()
 
+    /** The Next button: the next song, from the top again at the end when repeating. */
     fun next() {
-        if (index + 1 < queue.size) load(index + 1, autoplay = true) else stopAtEnd()
+        when {
+            position + 1 < order.size -> load(position + 1, autoplay = true)
+            repeat != Repeat.OFF && order.isNotEmpty() -> startOver()
+            else -> stopAtEnd()
+        }
     }
 
     fun previous() {
         val mediaPlayer = player ?: return
-        if (mediaPlayer.currentPosition > RESTART_THRESHOLD_MS || index == 0) {
-            mediaPlayer.seekTo(0)
-            publishState()
-        } else {
-            load(index - 1, autoplay = true)
+        when {
+            mediaPlayer.currentPosition > RESTART_THRESHOLD_MS -> restartSong()
+            position > 0 -> load(position - 1, autoplay = true)
+            repeat != Repeat.OFF && order.size > 1 -> load(order.size - 1, autoplay = true)
+            else -> restartSong()
         }
     }
 
@@ -106,28 +181,55 @@ object MusicPlayer {
         if (current?.file != song.file) return
         release()
         queue = emptyList()
-        index = -1
+        order = emptyList()
+        position = -1
         notifyListeners()
     }
 
-    private fun load(newIndex: Int, autoplay: Boolean) {
+    /** Covers are small JPEGs; anything larger is scaled down before it goes into the session. */
+    private fun coverOf(song: Music.LocalSong): Bitmap? {
+        val path = song.cover.takeIf { it.exists() }?.path ?: return null
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(path, bounds)
+        var sample = 1
+        while (maxOf(bounds.outWidth, bounds.outHeight) / sample > COVER_MAX_PX) sample *= 2
+        return BitmapFactory.decodeFile(path, BitmapFactory.Options().apply { inSampleSize = sample })
+    }
+
+    private fun onSongEnded() {
+        if (repeat == Repeat.ONE) restartSong(play = true) else next()
+    }
+
+    /** The end of the list while repeating: a shuffled list is mixed again for the next round. */
+    private fun startOver() {
+        if (shuffle) order = queue.indices.shuffled()
+        load(0, autoplay = true)
+    }
+
+    private fun restartSong(play: Boolean = false) {
+        player?.seekTo(0)
+        if (play) player?.start()
+        publishState()
+    }
+
+    private fun load(newPosition: Int, autoplay: Boolean) {
         val context = appContext ?: return
-        val song = queue.getOrNull(newIndex) ?: return
+        val song = order.getOrNull(newPosition)?.let(queue::getOrNull) ?: return
         player?.release()
-        index = newIndex
+        position = newPosition
         player = try {
             MediaPlayer().apply {
                 setAudioAttributes(AUDIO_ATTRIBUTES)
                 setDataSource(song.file.path)
-                setOnCompletionListener { next() }
+                setOnCompletionListener { onSongEnded() }
                 prepare()
             }
         } catch (e: IOException) {
             null
         }
         if (player == null) {
-            // An unreadable file is skipped rather than stopping the list.
-            if (newIndex + 1 < queue.size) load(newIndex + 1, autoplay) else notifyListeners()
+            // An unreadable file (deleted meanwhile) is skipped rather than stopping the list.
+            if (newPosition + 1 < order.size) load(newPosition + 1, autoplay) else notifyListeners()
             return
         }
         session(context).setMetadata(
@@ -135,6 +237,8 @@ object MusicPlayer {
                 .putString(MediaMetadata.METADATA_KEY_TITLE, song.title)
                 .putString(MediaMetadata.METADATA_KEY_ARTIST, song.artist)
                 .putLong(MediaMetadata.METADATA_KEY_DURATION, player?.duration?.toLong() ?: 0L)
+                // The saved cover, for the home screen's now-playing card.
+                .apply { coverOf(song)?.let { putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, it) } }
                 .build(),
         )
         if (autoplay) resume() else publishState()
@@ -244,6 +348,8 @@ object MusicPlayer {
     private fun notifyListeners() {
         listeners.toList().forEach { it() }
     }
+
+    private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     private val AUDIO_ATTRIBUTES: AudioAttributes = AudioAttributes.Builder()
         .setUsage(AudioAttributes.USAGE_MEDIA)

@@ -99,6 +99,29 @@
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
             android:textSize="19sp" />
+
+        <Space
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- One tap to random music on the Saved tab. -->
+        <TextView
+            android:id="@+id/music_shuffle_all"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_gravity="center_vertical"
+            android:background="@drawable/bg_tile"
+            android:drawableStart="@drawable/ic_shuffle"
+            android:drawablePadding="10dp"
+            android:drawableTint="?attr/obsAccent"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="18dp"
+            android:text="@string/music_shuffle_all"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:visibility="gone" />
     </LinearLayout>
 
     <FrameLayout
@@ -152,72 +175,133 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:background="@drawable/bg_card"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:paddingStart="24dp"
         android:paddingTop="14dp"
         android:paddingEnd="16dp"
-        android:paddingBottom="14dp"
+        android:paddingBottom="8dp"
         android:visibility="gone">
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/music_player_title"
-                android:layout_width="match_parent"
+            <LinearLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:textColor="@color/text_primary"
-                android:textSize="19sp" />
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/music_player_artist"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:textColor="@color/text_secondary"
-                android:textSize="15sp" />
+                <TextView
+                    android:id="@+id/music_player_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:textColor="@color/text_primary"
+                    android:textSize="19sp" />
+
+                <TextView
+                    android:id="@+id/music_player_artist"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/music_player_previous"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:background="@drawable/bg_round_button"
+                android:contentDescription="@string/cd_previous"
+                android:padding="18dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_previous"
+                android:tint="@color/text_primary" />
+
+            <ImageButton
+                android:id="@+id/music_player_play"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_play"
+                android:contentDescription="@string/cd_play"
+                android:padding="22dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_play"
+                android:tint="@color/bg" />
+
+            <ImageButton
+                android:id="@+id/music_player_next"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:background="@drawable/bg_round_button"
+                android:contentDescription="@string/cd_next"
+                android:padding="18dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_next"
+                android:tint="@color/text_primary" />
         </LinearLayout>
 
-        <ImageButton
-            android:id="@+id/music_player_previous"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:background="@drawable/bg_round_button"
-            android:contentDescription="@string/cd_previous"
-            android:padding="18dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_previous"
-            android:tint="@color/text_primary" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <ImageButton
-            android:id="@+id/music_player_play"
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
-            android:background="@drawable/bg_play"
-            android:contentDescription="@string/cd_play"
-            android:padding="22dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_play"
-            android:tint="@color/bg" />
+            <ImageButton
+                android:id="@+id/music_player_shuffle"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_round_button"
+                android:contentDescription="@string/cd_shuffle"
+                android:padding="13dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_shuffle" />
 
-        <ImageButton
-            android:id="@+id/music_player_next"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:background="@drawable/bg_round_button"
-            android:contentDescription="@string/cd_next"
-            android:padding="18dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_next"
-            android:tint="@color/text_primary" />
+            <TextView
+                android:id="@+id/music_player_position"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:gravity="center"
+                android:minWidth="44dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp" />
+
+            <com.obsidian.carlauncher.widget.LineProgressView
+                android:id="@+id/music_player_progress"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/music_player_duration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="4dp"
+                android:gravity="center"
+                android:minWidth="44dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp" />
+
+            <ImageButton
+                android:id="@+id/music_player_repeat"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_round_button"
+                android:padding="13dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_repeat" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

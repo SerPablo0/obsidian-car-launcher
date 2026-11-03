@@ -237,4 +237,9 @@
     <string name="music_delete_title">Delete “%1$s”?</string>
     <string name="music_delete">Delete</string>
     <string name="cd_download">Download</string>
+    <string name="music_shuffle_all">Shuffle all</string>
+    <string name="cd_shuffle">Shuffle</string>
+    <string name="cd_repeat_off">Repeat: off</string>
+    <string name="cd_repeat_all">Repeat: all songs</string>
+    <string name="cd_repeat_one">Repeat: this song</string>
 </resources>
