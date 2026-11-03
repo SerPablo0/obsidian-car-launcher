@@ -12,3 +12,7 @@ captures/
 *.jks
 
 *.apk
+
+# JVM crash logs from failed builds; they name local paths.
+hs_err_pid*.log
+replay_pid*.log
