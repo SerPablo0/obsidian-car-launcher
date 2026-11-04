@@ -1,11 +1,6 @@
 package com.obsidian.carlauncher.welcome
 
-import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
-import android.animation.AnimatorSet
 import android.animation.ArgbEvaluator
-import android.animation.ObjectAnimator
-import android.animation.ValueAnimator
 import android.app.Activity
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -16,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
+import android.view.animation.LinearInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -37,7 +33,7 @@ import java.util.Locale
 class WelcomeActivity : Activity() {
 
     private val handler = Handler(Looper.getMainLooper())
-    private val animators = mutableListOf<Animator>()
+    private val timeline = Timeline()
     private var leaving = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,7 +60,7 @@ class WelcomeActivity : Activity() {
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
-        animators.forEach { it.cancel() }
+        timeline.cancel()
         super.onDestroy()
     }
 
@@ -92,35 +88,29 @@ class WelcomeActivity : Activity() {
 
     private fun animateIn(steps: List<View>) {
         val emblem = findViewById<EmblemView>(R.id.welcome_emblem)
-        animate(0L, RING_MS, DecelerateInterpolator(1.5f)) { emblem.ring = it }
-        animate(RING_MS - 150, DOT_MS, OvershootInterpolator(3f)) { emblem.dot = it }
+        timeline.add(0L, RING_MS, DecelerateInterpolator(1.5f)) { emblem.ring = it }
+        timeline.add(RING_MS - 150, DOT_MS, OvershootInterpolator(3f)) { emblem.dot = it }
 
         val pulse = findViewById<View>(R.id.welcome_pulse)
-        pulse.scaleX = 1f
-        pulse.scaleY = 1f
-        pulse.alpha = 0.9f
-        pulse.animate().scaleX(PULSE_SCALE).scaleY(PULSE_SCALE).alpha(0f)
-            .setStartDelay(RING_MS).setDuration(PULSE_MS).setInterpolator(DecelerateInterpolator()).withLayer().start()
+        timeline.add(RING_MS, PULSE_MS, DecelerateInterpolator()) { spread(pulse, it, PULSE_SCALE) }
 
         val rise = 24 * resources.displayMetrics.density
         steps.forEachIndexed { index, view ->
             view.alpha = 0f
             view.translationY = rise
-            view.animate().alpha(1f).translationY(0f)
-                .setStartDelay(TEXT_START_MS + index * TEXT_STAGGER_MS).setDuration(TEXT_MS)
-                .setInterpolator(DecelerateInterpolator()).withLayer().start()
+            timeline.add(TEXT_START_MS + index * TEXT_STAGGER_MS, TEXT_MS, DecelerateInterpolator()) {
+                view.alpha = it
+                view.translationY = rise * (1 - it)
+            }
         }
     }
 
-    private fun animate(delay: Long, duration: Long, interpolator: android.animation.TimeInterpolator, update: (Float) -> Unit) {
-        ValueAnimator.ofFloat(0f, 1f).apply {
-            startDelay = delay
-            this.duration = duration
-            this.interpolator = interpolator
-            addUpdateListener { update(it.animatedValue as Float) }
-            animators += this
-            start()
-        }
+    /** The ring of light: grows to [scale] times its size while it fades out. */
+    private fun spread(pulse: View, progress: Float, scale: Float) {
+        val size = 1 + (scale - 1) * progress
+        pulse.scaleX = size
+        pulse.scaleY = size
+        pulse.alpha = PULSE_ALPHA * (1 - progress)
     }
 
     /** A tap skips with a quick fade; at the end of its time the welcome plays its exit. */
@@ -129,10 +119,9 @@ class WelcomeActivity : Activity() {
         leaving = true
         handler.removeCallbacksAndMessages(null)
         if (fast) {
-            findViewById<View>(R.id.welcome_content).animate().alpha(0f)
-                .setStartDelay(0).setDuration(FADE_FAST_MS).withLayer()
-                .withEndAction(::close)
-                .start()
+            val content = findViewById<View>(R.id.welcome_content)
+            timeline.add(0L, FADE_FAST_MS, LinearInterpolator()) { content.alpha = 1 - it }
+            handler.postDelayed(::close, FADE_FAST_MS)
         } else {
             playExit()
         }
@@ -144,78 +133,59 @@ class WelcomeActivity : Activity() {
 
         // The ring opens up and dissolves while the lines leave.
         val emblem = findViewById<View>(R.id.welcome_emblem)
-        emblem.animate().scaleX(EMBLEM_EXIT_SCALE).scaleY(EMBLEM_EXIT_SCALE).alpha(0f)
-            .setStartDelay(EMBLEM_EXIT_DELAY_MS).setDuration(EMBLEM_EXIT_MS).setInterpolator(DecelerateInterpolator()).withLayer().start()
+        timeline.add(EMBLEM_EXIT_DELAY_MS, EMBLEM_EXIT_MS, DecelerateInterpolator()) {
+            val size = 1 + (EMBLEM_EXIT_SCALE - 1) * it
+            emblem.scaleX = size
+            emblem.scaleY = size
+            emblem.alpha = 1 - it
+        }
         val pulse = findViewById<View>(R.id.welcome_pulse)
-        pulse.scaleX = 1f
-        pulse.scaleY = 1f
-        pulse.alpha = 0.9f
-        pulse.animate().scaleX(PULSE_EXIT_SCALE).scaleY(PULSE_EXIT_SCALE).alpha(0f)
-            .setStartDelay(EMBLEM_EXIT_DELAY_MS).setDuration(PULSE_EXIT_MS).setInterpolator(DecelerateInterpolator()).withLayer().start()
+        timeline.add(EMBLEM_EXIT_DELAY_MS, PULSE_EXIT_MS, DecelerateInterpolator()) { spread(pulse, it, PULSE_EXIT_SCALE) }
 
         val lines = textLines()
         lines.forEachIndexed { index, line ->
             val toLeft = index % 2 == 0
             val light = lightFor(root, line, accent, toLeft)
-            AnimatorSet().apply {
-                playSequentially(recolour(line, accent), collapse(line, light), depart(root, light, toLeft))
-                startDelay = index * LINE_STAGGER_MS
-                animators += this
-                start()
-            }
+            val start = index * LINE_STAGGER_MS
+            recolour(line, accent, start)
+            collapse(line, light, start + RECOLOUR_MS)
+            depart(root, light, toLeft, start + RECOLOUR_MS + COLLAPSE_MS)
         }
         val lastLineEnds = (lines.size - 1) * LINE_STAGGER_MS + RECOLOUR_MS + COLLAPSE_MS + DEPART_MS
         handler.postDelayed(::close, maxOf(lastLineEnds, EMBLEM_EXIT_DELAY_MS + PULSE_EXIT_MS))
     }
 
     /** The text takes on the accent colour; a status line's box fades away around it. */
-    private fun recolour(line: TextView, accent: Int): Animator {
+    private fun recolour(line: TextView, accent: Int, start: Long) {
         val box = line.background?.mutate()
-        return ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = RECOLOUR_MS
-            val evaluator = ArgbEvaluator()
-            val from = line.currentTextColor
-            addUpdateListener {
-                val progress = it.animatedValue as Float
-                line.setTextColor(evaluator.evaluate(progress, from, accent) as Int)
-                box?.alpha = ((1 - progress) * 255).toInt()
-            }
+        val evaluator = ArgbEvaluator()
+        val from = line.currentTextColor
+        timeline.add(start, RECOLOUR_MS, LinearInterpolator()) {
+            line.setTextColor(evaluator.evaluate(it, from, accent) as Int)
+            box?.alpha = ((1 - it) * 255).toInt()
         }
     }
 
     /** The line of text flattens into its light. */
-    private fun collapse(line: View, light: View) = AnimatorSet().apply {
-        duration = COLLAPSE_MS
-        interpolator = DecelerateInterpolator()
-        playTogether(
-            ObjectAnimator.ofFloat(line, View.SCALE_Y, COLLAPSED_SCALE),
-            ObjectAnimator.ofFloat(line, View.ALPHA, 0f),
-            ObjectAnimator.ofFloat(light, View.ALPHA, 0f, 1f),
-            ObjectAnimator.ofFloat(light, View.SCALE_X, LIGHT_START_SCALE, 1f),
-        )
+    private fun collapse(line: View, light: View, start: Long) {
+        timeline.add(start, COLLAPSE_MS, DecelerateInterpolator()) {
+            line.scaleY = 1 + (COLLAPSED_SCALE - 1) * it
+            line.alpha = 1 - it
+            light.alpha = it
+            light.scaleX = LIGHT_START_SCALE + (1 - LIGHT_START_SCALE) * it
+        }
     }
 
     /** The light speeds off its side of the screen, stretching into a trail behind its bright end. */
-    private fun depart(root: View, light: View, toLeft: Boolean): Animator {
+    private fun depart(root: View, light: View, toLeft: Boolean, start: Long) {
         // Far enough that even the stretched trail is past the edge.
-        val distance = root.width + light.layoutParams.width * TRAIL_SCALE
-        return AnimatorSet().apply {
-            interpolator = AccelerateInterpolator(DEPART_ACCELERATION)
-            playTogether(
-                ObjectAnimator.ofFloat(light, View.TRANSLATION_X, if (toLeft) -distance else distance).setDuration(DEPART_MS),
-                ObjectAnimator.ofFloat(light, View.SCALE_X, 1f, TRAIL_SCALE).setDuration(DEPART_MS),
-                ObjectAnimator.ofFloat(light, View.ALPHA, 1f, 0f).apply {
-                    startDelay = DEPART_MS - TRAIL_FADE_MS
-                    duration = TRAIL_FADE_MS
-                },
-            )
-            addListener(object : AnimatorListenerAdapter() {
-                // Stretching from the bright end makes the trail grow behind it.
-                override fun onAnimationStart(animation: Animator) {
-                    light.pivotX = if (toLeft) 0f else light.width.toFloat()
-                }
-            })
+        val distance = (root.width + light.layoutParams.width * TRAIL_SCALE) * if (toLeft) -1 else 1
+        val speeding = AccelerateInterpolator(DEPART_ACCELERATION)
+        timeline.add(start, DEPART_MS, speeding) {
+            light.translationX = distance * it
+            light.scaleX = 1 + (TRAIL_SCALE - 1) * it
         }
+        timeline.add(start + DEPART_MS - TRAIL_FADE_MS, TRAIL_FADE_MS, speeding) { light.alpha = 1 - it }
     }
 
     /**
@@ -235,6 +205,8 @@ class WelcomeActivity : Activity() {
                 FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, coreHeight, Gravity.CENTER_VERTICAL))
         }
         root.addView(light, FrameLayout.LayoutParams(width, haloHeight))
+        // Growing from the bright end makes the trail stretch out behind it.
+        light.pivotX = if (toLeft) 0f else width.toFloat()
         val lineAt = IntArray(2).also(line::getLocationInWindow)
         val rootAt = IntArray(2).also(root::getLocationInWindow)
         light.x = lineAt[0] - rootAt[0] + line.width / 2f - width / 2f
@@ -267,6 +239,7 @@ class WelcomeActivity : Activity() {
         const val DOT_MS = 450L
         const val PULSE_MS = 1_300L
         const val PULSE_SCALE = 2.6f
+        const val PULSE_ALPHA = 0.9f
         const val TEXT_START_MS = 700L
         const val TEXT_STAGGER_MS = 160L
         const val TEXT_MS = 500L
